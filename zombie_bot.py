@@ -1,4 +1,4 @@
-import os, json, random, requests, markdown, urllib.parse, feedparser, tweepy, time
+import os, json, random, requests, markdown, urllib.parse, feedparser, tweepy, time, re
 from datetime import datetime
 
 # ==========================================
@@ -12,11 +12,9 @@ def log(msg):
 # ==========================================
 AMAZON_TAG = "empireanalyst-20"
 BYBIT_LINK = "https://www.bybit.com/invite?ref=DOVWK5A"
-# 이사한 새 주소 (GitHub Pages)
 BLOG_BASE_URL = "https://ramuh18.github.io/zombie-bot/"
 EMPIRE_URL = "https://empire-analyst.digital"
 
-# 키 설정
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 DEVTO_TOKEN = os.environ.get("DEVTO_TOKEN")
 X_API_KEY = os.environ.get("X_API_KEY")
@@ -39,19 +37,40 @@ def get_hot_topic():
     return random.choice(["Bitcoin ETF Surge", "Global Inflation Crisis", "AI Tech Bubble", "Gold Price Breakout", "Oil Market Volatility"])
 
 # ==========================================
-# [2. 콘텐츠 엔진 (JSON 청소 필터 포함)]
+# [2. 콘텐츠 엔진 (강력 세척 모드)]
 # ==========================================
 def clean_text(raw_text):
-    """AI가 뱉은 이상한 JSON 코드 덩어리를 청소하는 함수"""
+    """외계어(JSON)를 강제로 찢고 알맹이만 꺼내는 함수"""
+    # 1. 만약 순수 텍스트라면 그냥 반환
+    if not raw_text.strip().startswith("{"):
+        return raw_text
+        
+    # 2. JSON 파싱 시도 (가장 깔끔한 방법)
     try:
-        # 혹시 JSON 형식인가?
-        if raw_text.strip().startswith('{') and '"role":' in raw_text:
-            data = json.loads(raw_text)
+        data = json.loads(raw_text)
+        # 'content' 키가 있으면 그게 진짜다
+        if isinstance(data, dict):
+            if 'choices' in data: return data['choices'][0]['message']['content']
             if 'content' in data: return data['content']
-            elif 'message' in data: return data['message']['content']
-            elif 'reasoning_content' in raw_text: # 딥시크 등 추론 모델 대비
-                return raw_text.split('"content":')[-1].strip('"}')
+            if 'message' in data: return data['message']['content']
     except: pass
+
+    # 3. 파싱 실패 시: "content":" 뒤에 있는 글자들을 강제로 긁어옴 (무식하지만 확실함)
+    try:
+        if '"content":"' in raw_text:
+            # "content":" 뒤쪽을 다 자르고, 끝에 있는 "}' 같은 찌꺼기 제거
+            extracted = raw_text.split('"content":"')[1]
+            extracted = extracted.split('"}')[0]
+            extracted = extracted.replace('\\n', '\n').replace('\\"', '"') # 깨진 문자 복구
+            return extracted
+    except: pass
+    
+    # 4. 정 안되면: '#'으로 시작하는 부분(제목)부터 끝까지 싹 긁음
+    match = re.search(r'(#\s.*)', raw_text, re.DOTALL)
+    if match:
+        return match.group(1)
+
+    # 5. 최후의 수단: 그냥 원본 (근데 여기까지 올 일 거의 없음)
     return raw_text
 
 def generate_content(topic, keyword):
@@ -61,31 +80,32 @@ def generate_content(topic, keyword):
     if GEMINI_API_KEY:
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-            data = {"contents": [{"parts": [{"text": f"Write a professional financial article about {topic} and {keyword}. 1000 words. Markdown."}]}]}
+            data = {"contents": [{"parts": [{"text": f"Act as a Wall Street Analyst. Write a detailed 1000-word financial report about '{topic}' and '{keyword}'. Use Markdown. Tone: Professional."}]}]}
             resp = requests.post(url, headers={'Content-Type': 'application/json'}, json=data, timeout=30)
             if resp.status_code == 200:
-                return resp.json()['candidates'][0]['content']['parts'][0]['text']
+                text = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                return text
         except: pass
 
     # 2차: 무료 AI (Pollinations)
     try:
-        # JSON 뱉지 말라고 강력 경고 포함
-        prompt = f"Write a professional financial news article about {topic} and {keyword}. Markdown format only. No JSON. No system messages."
+        prompt = f"Write a professional financial news article about {topic} and {keyword}. Markdown format. Do not use JSON."
         url = f"https://text.pollinations.ai/{urllib.parse.quote(prompt)}"
         resp = requests.get(url, timeout=60)
         
         if resp.status_code == 200:
-            clean_md = clean_text(resp.text) # ★ 청소 실행
-            if len(clean_md) > 500:
-                log("✅ 무료 AI 생성 성공 (필터 적용됨)")
-                return clean_md
-    except: pass
+            # ★ 여기서 강력 세척기 돌림
+            final_text = clean_text(resp.text)
+            if len(final_text) > 300:
+                log("✅ 무료 AI 생성 성공 (세척 완료)")
+                return final_text
+    except Exception as e: log(f"Error: {e}")
 
     # 3차: 비상용 원고
     return f"### 🚨 Market Update: {topic}\n\nInstitutional volume is rising in **{keyword}**. Smart money is accumulating."
 
 # ==========================================
-# [3. 업로드 및 디자인 (본진 강화)]
+# [3. 업로드 및 디자인]
 # ==========================================
 def post_to_devto(title, md, canonical, img):
     if not DEVTO_TOKEN: return
@@ -102,11 +122,12 @@ def post_to_x(text):
     except: pass
 
 def main():
-    log("🏁 디자인 최종 완성 버전 가동")
+    log("🏁 강력 세척 버전 가동")
     
     hot_topic = get_hot_topic()
     keyword = "Bitcoin" if "Crypto" in hot_topic else "Gold"
     
+    # 본문 생성 (세척 포함)
     raw_md = generate_content(hot_topic, keyword)
 
     try:
@@ -115,7 +136,6 @@ def main():
         amz_link = f"https://www.amazon.com/s?k={keyword}&tag={AMAZON_TAG}"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
         
-        # [상품 & 보너스 박스]
         promo_html = f"""
         <div style="margin-top: 50px; padding: 25px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e9ecef;">
             <h3 style="margin-top: 0; color: #2d3436;">🛡️ Recommended: <span style="color: #d63031;">{keyword}</span></h3>
@@ -129,17 +149,14 @@ def main():
         </div>
         """
 
-        # [★ 본진(Empire Analyst) 디자인 강화]
         footer_html = f"""
         <div style="margin-top: 80px; background: #111; padding: 40px 20px; border-radius: 16px; text-align: center; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
             <div style="font-size: 3em; margin-bottom: 10px;">🏛️</div>
             <h2 style="color: white; border: none; margin: 0; font-size: 1.8em;">Empire Analyst</h2>
             <p style="color: #888; margin: 10px 0 30px 0; font-size: 0.9em;">Premium Financial Intelligence & Automated Insights</p>
-            
             <a href="{EMPIRE_URL}" style="display: inline-block; background: white; color: black; padding: 15px 35px; border-radius: 30px; font-weight: bold; text-decoration: none; font-size: 1em; transition: all 0.3s ease; box-shadow: 0 5px 15px rgba(255,255,255,0.2);">
                 🚀 Visit Official Headquarters
             </a>
-            
             <p style="margin-top: 30px; font-size: 0.7em; color: #444;">
                 © 2026 Empire Analyst Systems. All rights reserved.
             </p>
@@ -174,9 +191,7 @@ def main():
     except Exception as e: log(f"❌ 에러: {e}")
 
     post_to_devto(hot_topic, raw_md, BLOG_BASE_URL, img_url)
-    
-    # 트위터 업로드 (새 주소)
-    tweet_txt = f"⚡ {hot_topic}\n\nSmart money is moving. Are you ready?\n\nRead full report 👇\n{BLOG_BASE_URL}\n\n#{keyword} #Finance"
+    tweet_txt = f"⚡ {hot_topic}\n\nSmart money is moving.\n\nRead full report 👇\n{BLOG_BASE_URL}\n\n#{keyword} #Finance"
     post_to_x(tweet_txt)
 
 if __name__ == "__main__":
