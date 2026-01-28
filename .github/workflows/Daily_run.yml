@@ -1,15 +1,15 @@
-name: Zombie Bot Daily Run
+name: Zombie Bot Repair Run
 
 on:
-  workflow_dispatch: # 수동 실행 버튼
+  workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # 6시간마다 자동 실행
+    - cron: '0 */6 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 파일 수정 권한
+      contents: write
 
     steps:
       - name: Checkout code
@@ -20,10 +20,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      # [핵심] 여기서 모든 기능을 받아들일 준비를 합니다.
       - name: Install dependencies
-        run: pip install requests tweepy feedparser markdown
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests tweepy feedparser markdown
 
-      - name: Run Zombie Bot
+      - name: Run Diagnostic Bot
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
@@ -33,12 +36,10 @@ jobs:
           DEVTO_TOKEN: ${{ secrets.DEVTO_TOKEN }}
         run: python zombie_bot.py
 
-      - name: Commit and Push
+      - name: Push Result
         run: |
           git config --global user.name "Zombie Bot"
           git config --global user.email "bot@zombie.com"
-          
-          # index.html만 갱신해서 보냅니다
           git add index.html
-          git commit -m "📝 Daily Update: $(date)" || echo "No changes"
+          git commit -m "🩺 Diagnostic Run: $(date)" || echo "No changes"
           git push
