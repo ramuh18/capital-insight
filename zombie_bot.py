@@ -23,7 +23,7 @@ X_ACCESS_TOKEN = os.environ.get("X_ACCESS_TOKEN")
 X_ACCESS_TOKEN_SECRET = os.environ.get("X_ACCESS_TOKEN_SECRET")
 
 # ==========================================
-# [1. 뉴스 엔진 (차단 우회 기능 포함)]
+# [1. 뉴스 엔진]
 # ==========================================
 def get_hot_topic():
     try:
@@ -33,18 +33,15 @@ def get_hot_topic():
             title = feed.entries[0].title
             log(f"✅ 뉴스 수신 성공: {title}")
             return title
-    except Exception as e:
-        log(f"⚠️ 뉴스 접속 에러 (무시): {e}")
+    except: pass
     
-    # 뉴스 차단 시 사용할 비상 주제들
-    log("⚠️ 뉴스 차단됨 -> 비상 주제 리스트 사용")
+    log("⚠️ 뉴스 차단됨 -> 비상 주제 사용")
     return random.choice(["Bitcoin ETF Surge", "Global Inflation Crisis", "AI Tech Bubble", "Gold Price Breakout", "Oil Market Volatility"])
 
 # ==========================================
-# [2. 콘텐츠 엔진 (1300자 보장 + 백업)]
+# [2. 콘텐츠 엔진 (백업 원고)]
 # ==========================================
 def get_backup_article(topic, keyword):
-    """AI가 멈췄을 때 사용하는 1300자 분량의 완성형 기사"""
     return f"""
 ### 🚨 Deep Dive Analysis: {topic}
 
@@ -73,8 +70,6 @@ The window of opportunity is closing. The data suggests we are in the early stag
 
 def generate_content(topic, keyword):
     log("🧠 AI 글쓰기 시작...")
-    
-    # 1300자 이상 강제 요청
     prompt = f"Act as a Wall Street Analyst. Write a detailed 1300-word financial report about '{topic}' and '{keyword}'. Use Markdown. Sections: Executive Summary, Macro Analysis, Technicals, Conclusion. Tone: Professional."
     
     # 1차: 구글 Gemini
@@ -88,12 +83,10 @@ def generate_content(topic, keyword):
                 if len(text) > 800:
                     log("✅ Gemini 생성 성공")
                     return text
-        except Exception as e:
-            log(f"⚠️ Gemini 연결 실패: {e}")
+        except: pass
 
-    # 2차: 무료 AI (Pollinations)
+    # 2차: 무료 AI
     try:
-        log("🔄 무료 AI 시도 중...")
         simple_prompt = f"Write a long comprehensive financial article about {keyword}"
         url = f"https://text.pollinations.ai/{urllib.parse.quote(simple_prompt)}"
         resp = requests.get(url, timeout=40)
@@ -102,8 +95,8 @@ def generate_content(topic, keyword):
             return resp.text
     except: pass
 
-    # 3차: 백업 템플릿
-    log("❌ 모든 AI 실패 -> 고품질 백업 원고 사용")
+    # 3차: 백업
+    log("❌ AI 실패 -> 백업 원고 사용")
     return get_backup_article(topic, keyword)
 
 # ==========================================
@@ -124,7 +117,7 @@ def post_to_x(text):
     except: pass
 
 def main():
-    log("🏁 좀비 봇 가동")
+    log("🏁 디자인 업그레이드 버전 가동")
     
     # 주제/키워드 선정
     hot_topic = get_hot_topic()
@@ -141,29 +134,53 @@ def main():
         amz_link = f"https://www.amazon.com/s?k={keyword}&tag={AMAZON_TAG}"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
         
-        promo = f"\n\n---\n### 🛡️ Recommended Asset: {keyword}\n[Check Prices]({amz_link})\n\n### 💰 Bonus\n[$30k Bybit Bonus]({BYBIT_LINK})"
-        final_content = f"![Header]({img_url})\n\n{raw_md}{promo}\n<small>Updated: {timestamp}</small>"
-        
+        # [디자인 강화] 프로모션 박스 HTML 직접 제작
+        promo_html = f"""
+        <div style="margin-top: 50px; padding: 25px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e9ecef;">
+            <h3 style="margin-top: 0; color: #2d3436; font-size: 1.4em;">🛡️ Recommended Asset: <span style="color: #d63031;">{keyword}</span></h3>
+            <p style="color: #636e72;">Smart money is accumulating. Don't miss the entry.</p>
+            <a href="{amz_link}" style="display: block; background: #ff9900; color: white; padding: 16px; text-align: center; border-radius: 8px; font-weight: bold; text-decoration: none; margin-bottom: 25px; font-size: 1.1em; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                🛒 Check {keyword} Prices on Amazon
+            </a>
+            
+            <hr style="border: 0; border-top: 1px solid #e9ecef; margin: 25px 0;">
+            
+            <h3 style="margin-top: 0; color: #2d3436; font-size: 1.4em;">💰 Trader's Bonus</h3>
+            <p style="color: #636e72;">Volatility is an opportunity. Use leverage wisely.</p>
+            <a href="{BYBIT_LINK}" style="display: block; background: #1a1a1a; color: #f9aa33; padding: 16px; text-align: center; border-radius: 8px; font-weight: bold; text-decoration: none; font-size: 1.1em; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                🎁 Claim $30,000 Bybit Bonus
+            </a>
+        </div>
+        """
+
         # HTML 변환 및 저장
-        html_body = markdown.markdown(final_content)
+        html_body = markdown.markdown(raw_md)
         full_html = f"""
         <!DOCTYPE html>
         <html><head>
             <title>{hot_topic}</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
-                body {{ font-family: -apple-system, sans-serif; max-width: 800px; margin: auto; padding: 20px; line-height: 1.6; color: #333; }}
-                img {{ max-width: 100%; border-radius: 10px; margin: 20px 0; }}
-                a {{ color: #0070f3; font-weight: bold; text-decoration: none; }}
-                h1 {{ font-size: 2.2em; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }}
+                body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; line-height: 1.7; color: #333; }}
+                img {{ max-width: 100%; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+                h1 {{ font-size: 2.5em; font-weight: 800; margin-bottom: 10px; letter-spacing: -1px; line-height: 1.2; }}
+                h2 {{ margin-top: 40px; border-bottom: 2px solid #000; padding-bottom: 10px; font-size: 1.8em; }}
+                h3 {{ margin-top: 30px; font-size: 1.4em; color: #444; }}
+                p {{ margin-bottom: 20px; font-size: 1.1em; color: #444; }}
+                a {{ color: #0070f3; text-decoration: none; }}
+                .tag {{ display: inline-block; background: #eee; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; margin-bottom: 20px; color: #666; font-weight: 600; }}
+                .footer {{ margin-top: 60px; text-align: center; padding-top: 20px; border-top: 1px solid #eaeaea; color: #888; font-size: 0.9em; }}
             </style>
         </head>
         <body>
-            <p style="color:#666; font-size:0.9em;">DAILY REPORT • {timestamp}</p>
+            <span class="tag">DAILY INSIGHT • {timestamp}</span>
             <h1>{hot_topic}</h1>
+            <img src="{img_url}" alt="Header Image">
             {html_body}
-            <div style="margin-top:50px; text-align:center;">
-                <a href="{EMPIRE_URL}" style="background:black; color:white; padding:15px 30px; border-radius:5px; text-decoration:none;">🚀 Visit Empire Analyst</a>
+            {promo_html}
+            <div class="footer">
+                <p>Automated Analysis by Empire Analyst</p>
+                <a href="{EMPIRE_URL}" style="color: #0070f3; font-weight: bold;">Visit Official Site →</a>
             </div>
         </body></html>
         """
@@ -175,8 +192,10 @@ def main():
     except Exception as e:
         log(f"❌ 파일 생성 중 에러: {e}")
 
-    # 외부 업로드 (실패해도 멈추지 않음)
-    post_to_devto(hot_topic, final_content, BLOG_BASE_URL, img_url)
+    # 외부 업로드
+    # Dev.to에는 디자인된 HTML 박스가 안 먹히니, 기존 마크다운 방식으로 보냄
+    devto_promo = f"\n\n---\n### 🛡️ Recommended: {keyword}\n[Check Prices]({amz_link})\n\n### 💰 Bonus\n[$30k Bybit Bonus]({BYBIT_LINK})"
+    post_to_devto(hot_topic, raw_md + devto_promo, BLOG_BASE_URL, img_url)
     post_to_x(f"⚡ {hot_topic}\n\nRead more: {BLOG_BASE_URL}\n\n#{keyword} #Finance")
     
     log("🏁 작업 종료")
