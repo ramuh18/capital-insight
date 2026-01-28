@@ -1,0 +1,44 @@
+name: Zombie Bot Daily Run
+
+on:
+  workflow_dispatch: # 수동 실행 버튼
+  schedule:
+    - cron: '0 */6 * * *' # 6시간마다 자동 실행
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 파일 수정 권한
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests tweepy feedparser markdown
+
+      - name: Run Zombie Bot
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          DEVTO_TOKEN: ${{ secrets.DEVTO_TOKEN }}
+        run: python zombie_bot.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "Zombie Bot"
+          git config --global user.email "bot@zombie.com"
+          
+          # index.html만 갱신해서 보냅니다
+          git add index.html
+          git commit -m "📝 Daily Update: $(date)" || echo "No changes"
+          git push
