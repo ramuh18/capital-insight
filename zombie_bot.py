@@ -55,7 +55,6 @@ def call_gemini(prompt):
 
 def call_pollinations_text(prompt):
     try:
-        # 프롬프트가 너무 길면 실패할 수 있으니 단순화
         simple_prompt = f"Write a financial blog post about {prompt[:50]}..."
         url = f"https://text.pollinations.ai/{urllib.parse.quote(simple_prompt)}"
         resp = requests.get(url, timeout=30)
@@ -65,25 +64,52 @@ def call_pollinations_text(prompt):
     return None
 
 def generate_content(topic, keyword):
-    # 1. 메인 프롬프트
     prompt = f"Write a professional financial analysis on '{topic}' focusing on '{keyword}'. Tone: Urgent, Wall Street. Length: 800 words. Markdown."
     
-    # AI 시도
     content = call_gemini(prompt)
     if content: return content
     
     content = call_pollinations_text(prompt)
     if content: return content
     
-    # 전부 실패하면 템플릿 사용
     print("⚠️ AI 실패 -> 템플릿 엔진 가동")
     return get_backup_article(topic, keyword)
+
+# ==========================================
+# [누락됐던 기능 복구: Dev.to 업로드]
+# ==========================================
+def post_to_devto(title, md, canonical, img):
+    if not DEVTO_TOKEN:
+        print("⚠️ DEVTO_TOKEN 없음. 업로드 건너뜀.")
+        return
+
+    print(f"🚀 Dev.to 업로드 시작: {title}")
+    try:
+        data = {
+            "article": {
+                "title": title,
+                "published": True,
+                "body_markdown": md,
+                "canonical_url": canonical,
+                "cover_image": img,
+                "tags": ["finance", "crypto", "investing"]
+            }
+        }
+        headers = {"api-key": DEVTO_TOKEN, "Content-Type": "application/json"}
+        resp = requests.post("https://dev.to/api/articles", headers=headers, json=data, timeout=10)
+        
+        if resp.status_code == 201:
+            print(f"✅ Dev.to 성공: {resp.json()['url']}")
+        else:
+            print(f"❌ Dev.to 실패 ({resp.status_code}): {resp.text}")
+    except Exception as e:
+        print(f"❌ Dev.to 에러: {e}")
 
 # ==========================================
 # [메인 실행]
 # ==========================================
 def main():
-    print("🚀 좀비 봇 가동 (Template Fallback Mode)")
+    print("🚀 좀비 봇 가동 (Fixed Version)")
     
     # 1. 주제 및 키워드
     try:
@@ -91,14 +117,12 @@ def main():
         hot_topic = random.choice(feed.entries[:5]).title if feed.entries else "Global Wealth Shift"
     except: hot_topic = "Global Wealth Shift"
     
-    # 키워드 추출 (단순화)
     product_keyword = "Gold" if "Gold" in hot_topic else "Bitcoin"
     if "Oil" in hot_topic: product_keyword = "Oil"
-    if "Tech" in hot_topic: product_keyword = "Tech Stocks"
     
     print(f"📝 주제: {hot_topic} / 키워드: {product_keyword}")
 
-    # 2. 본문 생성 (AI or 템플릿)
+    # 2. 본문 생성
     raw_markdown = generate_content(hot_topic, product_keyword)
 
     # 3. 이미지 및 링크
@@ -148,6 +172,7 @@ def main():
     with open("index.html", "w", encoding="utf-8") as f: f.write(full_html)
     print("✅ index.html 생성 완료")
     
+    # 5. Dev.to 업로드 실행
     post_to_devto(hot_topic, final_content, BLOG_BASE_URL, header_image)
 
 if __name__ == "__main__": main()
