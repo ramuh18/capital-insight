@@ -2,7 +2,7 @@ import os, json, random, requests, markdown, urllib.parse, feedparser, time, re
 import sys, io
 from datetime import datetime
 
-# [핵심] 인코딩 & 특수문자 깨짐 방지
+# [핵심] 인코딩 강제 (외계어 방지)
 sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
 
@@ -31,12 +31,24 @@ AMAZON_LINK = f"https://www.amazon.com/s?k=ledger+nano+x&tag={AMAZON_TAG}"
 HISTORY_FILE = "history.json"
 
 # ==========================================
-# [1. 제목 세탁기]
+# [1. 텍스트 정제기 (AI 생각 지우개)]
 # ==========================================
-def clean_title_aggressive(text):
-    text = text.strip().replace('"', '').replace("'", "").replace("*", "")
-    patterns = [r"^BREAKING[:\s]*", r"^ALERT[:\s]*", r"^WARNING[:\s]*", r"Title:"]
-    for p in patterns: text = re.sub(p, "", text, flags=re.IGNORECASE)
+def clean_ai_output(text):
+    if not text: return ""
+    # 1. JSON 형식으로 나온 생각(reasoning_content) 제거
+    text = re.sub(r'\{"role":.*?"reasoning_content":.*?"content":"', '', text, flags=re.DOTALL)
+    text = re.sub(r'"\}', '', text)
+    
+    # 2. "Draft:", "Word count:", "Let's write" 같은 혼잣말 제거
+    patterns = [
+        r"Draft:", r"Word count:", r"Let's write", r"Note:", r"Here is the draft",
+        r"Internal Monologue:", r"Thinking Process:", r"Length: \d+ words"
+    ]
+    for p in patterns:
+        text = re.sub(p, "", text, flags=re.IGNORECASE)
+    
+    # 3. 마크다운 기호 정리
+    text = text.strip().replace('"', '').replace("'", "")
     return text.strip()
 
 # ==========================================
@@ -48,15 +60,19 @@ def get_hot_topic():
         raw_news = random.choice(feed.entries[:5]).title if feed.entries else "Global Market Outlook"
     except: raw_news = "Bitcoin & Crypto Trends"
 
-    # ★ 프롬프트 강화: 잡담 금지
-    prompt = f"Rewrite '{raw_news}' into a high-end financial report title (MAX 9 WORDS). Professional tone. English Only. Do NOT add any explanation."
+    prompt = f"Rewrite '{raw_news}' into a high-end financial report title (MAX 9 WORDS). Professional tone. English Only. Output ONLY the title."
     
     title = "Market Intelligence Report"
     for _ in range(2):
         try:
             if GEMINI_API_KEY:
+                # ★ 중요: 생각 기능 끄는 파라미터 추가
                 url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY
-                resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=15)
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.3} # 창의성 낮춰서 딴소리 방지
+                }
+                resp = requests.post(url, json=payload, timeout=15)
                 if resp.status_code == 200:
                     title = resp.json()['candidates'][0]['content']['parts'][0]['text']
                     break
@@ -65,7 +81,7 @@ def get_hot_topic():
             title = resp.text
             break
         except: time.sleep(1)
-    return clean_title_aggressive(title)
+    return clean_ai_output(title)
 
 # ==========================================
 # [3. 히스토리 & 사이트맵]
@@ -123,22 +139,29 @@ def get_sidebar_recent_posts(history, current_title):
     return html
 
 # ==========================================
-# [4. 본문 생성]
+# [4. 본문 생성 (강력 필터링)]
 # ==========================================
 def generate_part(topic, focus):
-    # ★ [핵심] 프롬프트 수정: 잡담 금지 명령 추가
-    # "Do NOT include internal monologue, drafting notes, or word counts."
-    prompt = f"Write a professional financial analysis section on '{topic}'. Focus: {focus}. Length: 350 words. Use Markdown. Tone: Institutional. Language: English Only. STRICTLY output ONLY the final article text. Do NOT include internal monologue, planning, drafting notes, or word counts. Start directly with the content."
+    # ★ 프롬프트 강화: 결과물만 내놓으라고 협박(?)
+    prompt = f"Write a professional financial analysis section on '{topic}'. Focus: {focus}. Length: 350 words. Use Markdown. Tone: Institutional. Language: English Only. DO NOT output drafting notes, internal monologue, or JSON. Just output the article content directly."
     
     for _ in range(2):
         try:
             if GEMINI_API_KEY:
                 url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY
-                resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
-                if resp.status_code == 200: return resp.json()['candidates'][0]['content']['parts'][0]['text']
+                # ★ 중요: Temperature를 0.2로 낮춰서 창의성을 죽이고 기계적으로 답변하게 만듦
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.2} 
+                }
+                resp = requests.post(url, json=payload, timeout=30)
+                if resp.status_code == 200: 
+                    raw_text = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                    return clean_ai_output(raw_text) # ★ 여기서 한번 더 씻어냄
+            
             url = f"https://text.pollinations.ai/{urllib.parse.quote(prompt)}"
             resp = requests.get(url, timeout=45)
-            return resp.text
+            return clean_ai_output(resp.text)
         except: time.sleep(1)
     return "Generating market analysis..."
 
@@ -159,38 +182,29 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
     <meta name="description" content="Capital Insight: Daily financial briefing on {topic}.">
     <title>{topic} | {BLOG_TITLE}</title>
     <link rel="canonical" href="{canonical_url}" />
-    
     <meta property="og:type" content="article" />
     <meta property="og:title" content="{topic}" />
     <meta property="og:description" content="Capital Insight Daily Briefing." />
     <meta property="og:image" content="{img_url}" />
     <meta property="og:url" content="{canonical_url}" />
     <meta name="twitter:card" content="summary_large_image" />
-
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    
     <style>
         :root {{ --primary: #0f172a; --accent: #b91c1c; --bg: #ffffff; --text: #334155; --sidebar: #f8fafc; }}
         body {{ font-family: 'Merriweather', serif; line-height: 1.8; color: var(--text); background: var(--bg); margin: 0; }}
-        
         header {{ background: var(--primary); color: #fff; padding: 25px 0; border-bottom: 5px solid var(--accent); }}
         .header-wrap {{ max-width: 1100px; margin: 0 auto; padding: 0 20px; text-align: center; }}
         .brand {{ font-family: 'Roboto', sans-serif; font-size: 2.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }}
         .sub-brand {{ font-family: 'Roboto', sans-serif; font-size: 0.9rem; font-weight: 400; opacity: 0.8; margin-top: 5px; letter-spacing: 2px; }}
         .date-badge {{ display: inline-block; background: var(--accent); color: #fff; padding: 4px 12px; border-radius: 20px; font-family: 'Roboto', sans-serif; font-size: 0.8rem; font-weight: bold; margin-top: 15px; }}
-
         .container {{ max-width: 1100px; margin: 40px auto; display: grid; grid-template-columns: 1fr; gap: 50px; padding: 0 20px; }}
         @media(min-width: 900px) {{ .container {{ grid-template-columns: 2.4fr 1fr; }} }}
-        
         h1 {{ font-size: 2.4rem; color: #0f172a; line-height: 1.25; margin-top: 0; font-weight: 900; }}
         .meta-info {{ font-family: 'Roboto', sans-serif; font-size: 0.85rem; color: #64748b; margin-bottom: 20px; font-weight: 500; text-transform: uppercase; }}
-        
         .featured-img {{ width: 100%; height: auto; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-height: 300px; background: #f0f0f0; }}
-        
         .sidebar {{ background: var(--sidebar); padding: 30px; border-radius: 12px; height: fit-content; border: 1px solid #e2e8f0; }}
         .widget {{ margin-bottom: 40px; }}
         .widget h3 {{ font-family: 'Roboto', sans-serif; font-size: 0.85rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 20px; font-weight: 700; }}
-        
         .ad-box {{ display: block; padding: 25px 20px; border-radius: 8px; text-align: center; text-decoration: none; margin-bottom: 15px; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
         .ad-box:hover {{ transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
         .ad-main {{ background: #0f172a; color: #fff; border: 1px solid #0f172a; }}
@@ -198,10 +212,8 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
         .ad-amazon {{ background: #ffffff; color: #0f172a; border: 2px solid #ea580c; }}
         .ad-title {{ display: block; font-weight: 900; font-size: 1.2rem; font-family: 'Roboto', sans-serif; margin-bottom: 5px; }}
         .ad-desc {{ display: block; font-size: 0.9rem; opacity: 0.9; }}
-
         a {{ color: var(--accent); text-decoration: none; font-weight: 700; }}
         .recent-posts li {{ margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; }}
-        
         footer {{ background: #0f172a; color: #64748b; text-align: center; padding: 50px 0; margin-top: 80px; font-size: 0.8rem; font-family: 'Roboto', sans-serif; }}
         .disclaimer {{ max-width: 800px; margin: 20px auto; line-height: 1.6; opacity: 0.7; font-size: 0.75rem; }}
     </style>
@@ -278,6 +290,9 @@ def main():
     content += generate_part(topic, "Macro Outlook") + "\n\n"
     content += generate_part(topic, "Technical Analysis") + "\n\n"
     content += generate_part(topic, "Strategic Action")
+    
+    # AI 찌꺼기 한번 더 제거
+    content = clean_ai_output(content)
     html_body = markdown.markdown(content)
     
     # [랜덤 스타일 생성]
