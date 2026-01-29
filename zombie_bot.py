@@ -22,7 +22,7 @@ X_API_SECRET = get_env("X_API_SECRET")
 X_ACCESS_TOKEN = get_env("X_ACCESS_TOKEN")
 X_ACCESS_TOKEN_SECRET = get_env("X_ACCESS_TOKEN_SECRET")
 
-# [1. 뉴스 주제 가져오기]
+# [1. 뉴스 주제]
 def get_hot_topic():
     topics = [
         "Bitcoin Institutional Adoption 2026",
@@ -37,27 +37,39 @@ def get_hot_topic():
     except: pass
     return random.choice(topics)
 
-# [2. 글 세척기 (AI가 뱉은 껍질 벗기기)]
+# [2. 악성 코드 & 광고 제거기 (핵심)]
 def clean_content(text):
     text = text.strip()
-    # JSON 파싱 시도
+    
+    # (1) JSON 껍데기 벗기기
     if text.startswith("{") or "reasoning_content" in text:
         try:
             data = json.loads(text)
-            if 'content' in data: return data['content']
-            if 'choices' in data: return data['choices'][0]['message']['content']
+            if 'content' in data: text = data['content']
+            elif 'choices' in data: text = data['choices'][0]['message']['content']
         except:
-            # 파싱 실패하면 정규식으로 'content' 내부만 추출
             match = re.search(r'"content":\s*"(.*?)"', text, re.DOTALL)
-            if match: return match.group(1).replace('\\n', '\n').replace('\\"', '"')
-            
-    # 마크다운 제목(#) 앞의 잡설 제거
+            if match: text = match.group(1).replace('\\n', '\n').replace('\\"', '"')
+
+    # (2) 무료 AI 광고 문구 강제 삭제 (사용자님 스크린샷 대응)
+    # "Powered by Pollinations.AI", "Support our mission", "Ad" 등의 문구를 다 지웁니다.
+    patterns_to_remove = [
+        r"Powered by Pollinations\.AI.*",
+        r"Support our mission.*",
+        r"🌸 Ad 🌸.*",
+        r"pollinations\.ai",
+        r"Running on free AI.*"
+    ]
+    for pattern in patterns_to_remove:
+        text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+
+    # (3) 마크다운 헤더(#) 앞의 잡설 제거
     if '#' in text:
         text = text[text.find('#'):]
-        
-    return text
 
-# [3. 글쓰기 엔진 (재시도 기능 탑재)]
+    return text.strip()
+
+# [3. 글쓰기 엔진]
 def generate_article_body(topic):
     log(f"🧠 주제: {topic}")
     prompt = f"""
@@ -65,79 +77,60 @@ def generate_article_body(topic):
     - Structure: Introduction, Key Drivers, Market Outlook, Conclusion.
     - Style: Professional, Insightful, Concise.
     - Format: Pure Markdown only. Use ## for headings.
-    - NO JSON. NO conversational filler.
+    - NO JSON. NO ADS. NO FOOTERS.
     """
     
-    # 최대 3번 시도 (글 망치면 다시 시킴)
     for attempt in range(3):
         try:
-            log(f"✍️ 글쓰기 시도 {attempt+1}/3...")
-            
-            # 1순위: Gemini
+            # Gemini
             if GEMINI_API_KEY:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
                 resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
                 if resp.status_code == 200:
                     text = resp.json()['candidates'][0]['content']['parts'][0]['text']
                     clean = clean_content(text)
-                    if len(clean) > 200: return clean # 성공!
+                    if len(clean) > 200: return clean
 
-            # 2순위: 무료 AI
+            # Pollinations
             url = f"https://text.pollinations.ai/{urllib.parse.quote(prompt)}"
             resp = requests.get(url, timeout=60)
-            clean = clean_content(resp.text)
+            clean = clean_content(resp.text) # 여기서 광고 삭제됨
             
-            # 검증: 외계어(JSON)나 너무 짧은 글은 실패 처리
-            if "reasoning_content" in clean or len(clean) < 200:
-                log("⚠️ 글 품질 미달. 재시도합니다.")
-                continue # 다음 시도로
-                
-            return clean # 성공!
+            if len(clean) > 200: return clean
             
         except Exception as e:
-            log(f"❌ 에러 발생: {e}")
+            log(f"⚠️ 에러: {e}")
             time.sleep(2)
 
-    # 3번 다 실패했을 때만 나가는 최후의 원고
-    log("🚨 모든 AI 시도 실패. 비상 원고 사용.")
-    return f"""
-    ## Market Update: {topic}
-    
-    **Executive Summary**
-    The market is showing increased volatility surrounding {topic}. Institutional investors are repositioning portfolios to manage risk.
-    
-    **Key Insights**
-    * **Trend Analysis:** Current price action suggests a consolidation phase.
-    * **Risk Factors:** Macroeconomic indicators remain mixed.
-    
-    **Outlook**
-    We recommend a cautious approach, focusing on high-quality assets like Gold and Bitcoin.
-    """
+    return f"## Market Update: {topic}\n\nInstitutional flows indicate volatility. Please check back for full analysis."
 
-# [4. 메인 실행 (건축가 역할)]
+# [4. 메인 실행 (바이비트 강제 삽입)]
 def main():
-    log("🏁 Empire Analyst (Perfect Layout) 가동")
+    log("🏁 Empire Analyst (Ad-Block Ver) 가동")
     topic = get_hot_topic()
     
-    # 1. AI에게 글만 받아옴 (디자인 X)
+    # 1. 글 생성 및 정제
     raw_md = generate_article_body(topic)
     html_content = markdown.markdown(raw_md)
     
-    # 2. 파이썬이 디자인을 입힘 (여기서 바이비트 강제 삽입)
+    # 2. 디자인 요소 준비
     img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(topic + ' chart 8k')}"
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
     
-    # ★ 바이비트/아마존 섹션 (파이썬이 직접 그림)
+    # ★ 3. 바이비트 섹션 (AI 글과 완전히 분리된 독립 구역)
+    # 이 부분은 AI가 손댈 수 없습니다.
     ads_section = f"""
-    <div style="margin-top: 40px; padding: 30px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; text-align: center;">
-        <h3 style="margin-top: 0; color: #2d3436;">💰 Exclusive Trader Offers</h3>
-        <p style="color: #636e72; margin-bottom: 20px;">Maximize your portfolio with our partners.</p>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <a href="{BYBIT_LINK}" target="_blank" style="display: block; padding: 16px; background: #121212; color: #f7a600; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 1.1em;">
+    <div style="margin-top: 50px; padding: 30px; background: #111; color: white; border-radius: 16px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; color: #f9aa33;">💰 Trader's Exclusive</h3>
+        <p style="color: #aaa; margin-bottom: 25px;">Take advantage of market volatility.</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 15px; max-width: 400px; margin: 0 auto;">
+            <a href="{BYBIT_LINK}" target="_blank" style="display: block; padding: 18px; background: #f9aa33; color: black; text-decoration: none; border-radius: 8px; font-weight: 900; font-size: 1.2em; transition: 0.3s;">
                 🎁 Claim $30,000 Bybit Bonus
             </a>
-            <a href="https://www.amazon.com/s?k=ledger+nano&tag={AMAZON_TAG}" target="_blank" style="display: block; padding: 16px; background: #ff9900; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 1.1em;">
-                🛡️ Secure Crypto with Ledger (Amazon)
+            
+            <a href="https://www.amazon.com/s?k=ledger+nano&tag={AMAZON_TAG}" target="_blank" style="display: block; padding: 18px; background: #333; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 1.1em; border: 1px solid #555;">
+                🛡️ Secure Your Assets (Ledger)
             </a>
         </div>
     </div>
@@ -151,18 +144,18 @@ def main():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{topic}</title>
         <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }}
-            img {{ width: 100%; height: auto; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
-            h1 {{ font-size: 2.5rem; margin-bottom: 10px; border-bottom: 2px solid #f1f1f1; padding-bottom: 15px; }}
-            h2 {{ color: #2c3e50; margin-top: 30px; }}
-            .badge {{ display: inline-block; background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; }}
-            .footer {{ margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #888; font-size: 0.9rem; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #222; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #fff; }}
+            img {{ width: 100%; height: auto; border-radius: 12px; margin: 30px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+            h1 {{ font-size: 2.5rem; margin-bottom: 10px; border-bottom: 2px solid #f1f1f1; padding-bottom: 15px; letter-spacing: -1px; }}
+            h2 {{ color: #2d3436; margin-top: 40px; border-left: 5px solid #000; padding-left: 15px; }}
+            p {{ margin-bottom: 20px; font-size: 1.1em; color: #444; }}
+            .badge {{ display: inline-block; background: #000; color: white; padding: 6px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: bold; margin-bottom: 20px; }}
+            .footer {{ margin-top: 80px; padding-top: 40px; border-top: 1px solid #eee; text-align: center; color: #888; font-size: 0.9rem; }}
             a {{ color: #0070f3; text-decoration: none; }}
-            a:hover {{ text-decoration: underline; }}
         </style>
     </head>
     <body>
-        <span class="badge">LIVE UPDATE: {current_time}</span>
+        <span class="badge">UPDATED: {current_time}</span>
         <h1>{topic}</h1>
         <img src="{img_url}" alt="Market Chart">
         
@@ -173,27 +166,25 @@ def main():
         {ads_section}
         
         <div class="footer">
-            <p>Analysis provided by <strong>Empire Analyst Systems</strong></p>
+            <p>Automated Analysis by <strong>Empire Analyst Systems</strong></p>
             <p><a href="{EMPIRE_URL}">Visit Official Headquarters →</a></p>
         </div>
     </body>
     </html>
     """
 
-    # 저장
     try:
         with open("index.html", "w", encoding="utf-8") as f: f.write(full_html)
         log("✅ index.html 저장 완료")
     except Exception as e: log(f"❌ 저장 실패: {e}")
 
-    # 배포 (Dev.to / X)
     if DEVTO_TOKEN:
         try: requests.post("https://dev.to/api/articles", headers={"api-key": DEVTO_TOKEN}, json={"article": {"title": topic, "published": True, "body_markdown": raw_md, "canonical_url": BLOG_BASE_URL}}, timeout=10)
         except: pass
     if X_API_KEY:
         try:
             client = tweepy.Client(X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET)
-            client.create_tweet(text=f"⚡ Market Alert: {topic}\n\nFull Report: {BLOG_BASE_URL}")
+            client.create_tweet(text=f"⚡ Market Alert: {topic}\n\nFull Analysis: {BLOG_BASE_URL}")
         except: pass
 
 if __name__ == "__main__":
