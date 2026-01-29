@@ -61,18 +61,26 @@ def get_hot_topic():
     return clean_title_aggressive(title)
 
 # ==========================================
-# [3. 히스토리 & 사이드바]
+# [3. 히스토리 & 사이드바] (수정된 부분)
 # ==========================================
 def load_and_sync_history():
     history = []
+    # 1. 로컬 파일 확인 (문법 수정됨)
     if os.path.exists(HISTORY_FILE):
-        try: with open(HISTORY_FILE, "r") as f: history = json.load(f)
-        except: pass
+        try:
+            with open(HISTORY_FILE, "r") as f:
+                history = json.load(f)
+        except:
+            pass
+            
+    # 2. 서버 파일 확인
     if not history:
         try:
             resp = requests.get(f"{BLOG_BASE_URL}{HISTORY_FILE}", timeout=5)
-            if resp.status_code == 200: history = resp.json()
-        except: pass
+            if resp.status_code == 200:
+                history = resp.json()
+        except:
+            pass
     return history
 
 def get_sidebar_recent_posts(history, current_title):
@@ -126,7 +134,7 @@ def generate_part(topic, focus):
 # ==========================================
 def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_url):
     
-    # ★ 사용자님의 구글 인증 태그가 여기 들어갔습니다!
+    # ★ 구글 인증 태그 (사용자님 코드)
     google_verification = '<meta name="google-site-verification" content="Jxh9S9J3S5_RBIpJH4CVrDkpRiDZ_mQ99TfIm7xK7YY" />'
     
     return f"""<!DOCTYPE html>
@@ -134,7 +142,6 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
 <head>
     <meta charset="UTF-8">
     {google_verification}
-    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Financial analysis on {topic}. Institutional market insights.">
     <title>{topic} - {BLOG_TITLE}</title>
@@ -219,7 +226,7 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
 # [7. 메인 실행]
 # ==========================================
 def main():
-    log("🏁 봇 가동 (Verification Added)")
+    log("🏁 봇 가동 (Syntax Fix)")
     topic = get_hot_topic()
     log(f"🔥 주제: {topic}")
     
