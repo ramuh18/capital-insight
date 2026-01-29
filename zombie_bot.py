@@ -25,9 +25,10 @@ X_ACCESS_TOKEN_SECRET = get_env("X_ACCESS_TOKEN_SECRET")
 # [1. 주제 선정]
 def get_hot_topic():
     topics = [
-        "Bitcoin vs Gold: Safe Haven Analysis 2026",
-        "AI Bubble Risks: Tech Sector Outlook",
-        "Global Inflation & Interest Rates 2026",
+        "Bitcoin 2026 Outlook: Institutional Flows",
+        "Gold Prices: Technical Breakout Analysis",
+        "AI Sector Valuation: Bubble or Growth?",
+        "Federal Reserve Policy: 2026 Forecast",
         "Ethereum ETF: Market Impact Report"
     ]
     try:
@@ -36,41 +37,54 @@ def get_hot_topic():
     except: pass
     return random.choice(topics)
 
-# [2. 글 세척기 (무료 AI 광고 박멸)]
+# [2. 글 세척기 (외계어 앞부분 강제 절단)]
 def clean_content(text):
     text = text.strip()
     
-    # JSON 제거
-    if text.startswith("{") or "reasoning_content" in text:
+    # 1. JSON이면 파싱 시도 (운 좋으면 여기서 걸림)
+    if text.startswith("{"):
         try:
             data = json.loads(text)
             if 'content' in data: text = data['content']
             elif 'choices' in data: text = data['choices'][0]['message']['content']
-        except:
-            match = re.search(r'"content":\s*"(.*?)"', text, re.DOTALL)
-            if match: text = match.group(1).replace('\\n', '\n').replace('\\"', '"')
+        except: pass
 
-    # 광고 문구 제거
-    patterns = [r"Powered by Pollinations\.AI.*", r"Support our mission.*", r"🌸 Ad 🌸.*", r"Running on free AI.*"]
+    # 2. ★ 핵심: 마크다운 제목(##)을 찾아서 그 앞(외계어/Reasoning)을 다 날려버림
+    # 보통 본문은 "## Executive Summary" 등으로 시작함.
+    # ##가 있으면 그 위치부터 끝까지만 살림.
+    match = re.search(r'(##\s)', text)
+    if match:
+        text = text[match.start():]
+    else:
+        # ##가 없으면 첫 번째 #라도 찾음
+        match_single = re.search(r'(#\s)', text)
+        if match_single:
+            text = text[match_single.start():]
+
+    # 3. 광고 문구 제거
+    patterns = [r"Powered by Pollinations.*", r"Running on free AI.*", r"🌸 Ad 🌸.*", r"Image:.*"]
     for p in patterns:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
 
-    # 마크다운 헤더 정리
-    if '#' in text: text = text[text.find('#'):]
-
     return text.strip()
 
-# [3. 글쓰기 엔진]
+# [3. 글쓰기 엔진 (AI에게 ## 쓰라고 강요)]
 def generate_article_body(topic):
     log(f"🧠 주제: {topic}")
     prompt = f"""
-    Act as a Senior Financial Analyst. Write a deep-dive report on '{topic}'.
-    Structure: Executive Summary, Key Drivers, Outlook. 
-    Format: Markdown. NO JSON. NO ADS.
+    Act as a Senior Analyst. Write a financial report on '{topic}'.
+    IMPORTANT: Start immediately with a Markdown heading (## Executive Summary).
+    Structure:
+    ## Executive Summary
+    ## Market Drivers
+    ## Institutional Analysis
+    ## Conclusion
+    Format: Markdown. NO JSON. NO INTRO.
     """
     
     for attempt in range(3):
         try:
+            # Gemini
             if GEMINI_API_KEY:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
                 resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
@@ -79,17 +93,32 @@ def generate_article_body(topic):
                     clean = clean_content(text)
                     if len(clean) > 200: return clean
 
+            # Pollinations
             url = f"https://text.pollinations.ai/{urllib.parse.quote(prompt)}"
             resp = requests.get(url, timeout=60)
             clean = clean_content(resp.text)
             if len(clean) > 200: return clean
-        except: time.sleep(2)
+            
+        except: time.sleep(1)
 
-    return f"## Analysis Update: {topic}\n\nMarket data is processing. Please check back shortly."
+    # 실패 시 수동 원고 (이것도 ## 로 시작하게 맞춤)
+    return f"""
+## Market Analysis: {topic}
 
-# [4. 메인 실행 (블랙 헤더 적용)]
+**Executive Summary**
+Institutional investors are currently hedging against macro volatility. Capital flow analysis suggests a shift towards defensive assets.
+
+**Key Drivers**
+* **Inflation:** Persistent CPI data is driving yield curves.
+* **Geopolitics:** Uncertainty remains a key factor.
+
+**Outlook**
+We maintain a cautious stance. Gold and Bitcoin remain key accumulation targets.
+"""
+
+# [4. 메인 실행 (슬림 디자인)]
 def main():
-    log("🏁 Empire Analyst (Black Header Ver) 가동")
+    log("🏁 Empire Analyst (Slim Header Ver) 가동")
     topic = get_hot_topic()
     raw_md = generate_article_body(topic)
     html_content = markdown.markdown(raw_md)
@@ -97,29 +126,28 @@ def main():
     img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(topic + ' chart 8k')}"
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
     
-    # ★ 디자인 변경: 헤더를 검은색으로 변경하여 업데이트 확인 용이하게 함
+    # ★ 디자인 변경: 헤더 높이 대폭 축소 (padding 40px -> 20px, 폰트 축소)
     header_section = f"""
-    <div style="background: #111; color: white; padding: 40px 20px; text-align: center; margin-bottom: 40px; border-radius: 0 0 20px 20px;">
-        <div style="font-size: 0.9rem; font-weight: bold; color: #f1c40f; letter-spacing: 2px; margin-bottom: 10px;">PREMIUM INTELLIGENCE</div>
-        <div style="font-family: serif; font-size: 2.8rem; font-weight: 900; margin-bottom: 5px;">EMPIRE ANALYST</div>
-        <div style="font-size: 0.8rem; color: #888;">EST. 2026 • QUANTITATIVE INSIGHTS</div>
+    <div style="background: #000; color: white; padding: 20px 15px; text-align: center; border-radius: 0 0 15px 15px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+        <div style="font-family: serif; font-size: 1.8rem; font-weight: 800; letter-spacing: 1px; line-height: 1;">EMPIRE ANALYST</div>
+        <div style="font-size: 0.75rem; color: #f1c40f; margin-top: 5px; font-weight: bold; letter-spacing: 2px;">PREMIUM INTELLIGENCE</div>
     </div>
     """
 
     ads_section = f"""
-    <div style="margin: 50px 0; padding: 30px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 12px; text-align: center;">
-        <h3 style="margin-top: 0; color: #2d3436;">⚡ Strategic Portfolio</h3>
-        <div style="display: flex; flex-direction: column; gap: 15px; max-width: 400px; margin: 20px auto 0;">
-            <a href="{BYBIT_LINK}" style="background: #000; color: #f1c40f; padding: 15px; border-radius: 8px; text-decoration: none; font-weight: bold;">🎁 Claim $30,000 Bybit Bonus</a>
-            <a href="https://www.amazon.com/s?k=gold&tag={AMAZON_TAG}" style="background: #ff9900; color: white; padding: 15px; border-radius: 8px; text-decoration: none; font-weight: bold;">🛡️ Check Gold Prices</a>
+    <div style="margin: 40px 0; padding: 25px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 10px; text-align: center;">
+        <h3 style="margin-top: 0; font-size: 1.2rem; color: #333;">⚡ Strategic Allocation</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px; max-width: 350px; margin: 15px auto 0;">
+            <a href="{BYBIT_LINK}" target="_blank" style="background: #000; color: #f1c40f; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 1rem;">🎁 Claim $30,000 Bonus</a>
+            <a href="https://www.amazon.com/s?k=gold&tag={AMAZON_TAG}" target="_blank" style="background: #e67e22; color: white; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 1rem;">🛡️ Check Gold Prices</a>
         </div>
     </div>
     """
 
     footer_section = f"""
-    <div style="margin-top: 60px; padding: 40px 20px; background: #000; color: white; border-radius: 16px; text-align: center;">
-        <h2 style="color: white; margin: 0 0 10px 0;">Empire Analyst HQ</h2>
-        <a href="{EMPIRE_URL}" style="display: inline-block; background: white; color: black; padding: 10px 25px; border-radius: 30px; font-weight: bold; text-decoration: none; margin-top: 20px;">VISIT OFFICIAL SITE →</a>
+    <div style="margin-top: 50px; padding: 30px 20px; background: #111; color: white; border-radius: 12px; text-align: center;">
+        <h3 style="color: white; margin: 0 0 15px 0; font-size: 1.2rem;">Empire Analyst HQ</h3>
+        <a href="{EMPIRE_URL}" style="display: inline-block; background: white; color: black; padding: 8px 20px; border-radius: 20px; font-weight: bold; text-decoration: none; font-size: 0.9rem;">Official Site →</a>
     </div>
     """
 
@@ -131,16 +159,20 @@ def main():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{topic}</title>
         <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.8; color: #333; max-width: 800px; margin: 0 auto; background-color: #fff; padding-bottom: 50px; }}
-            img {{ width: 100%; height: auto; border-radius: 8px; margin: 30px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
-            h1 {{ font-size: 2.2rem; margin-bottom: 10px; padding: 0 20px; }}
-            .meta {{ font-size: 0.8rem; color: #999; margin-bottom: 20px; padding: 0 20px; text-transform: uppercase; }}
-            .content {{ padding: 0 20px; }}
-            a {{ color: #0070f3; text-decoration: none; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.7; color: #333; max-width: 700px; margin: 0 auto; background-color: #fff; padding-bottom: 50px; }}
+            img {{ width: 100%; height: auto; border-radius: 8px; margin: 20px 0; }}
+            h1 {{ font-size: 1.8rem; margin: 10px 0 10px 0; padding: 0 15px; line-height: 1.3; }}
+            .meta {{ font-size: 0.75rem; color: #aaa; padding: 0 15px; font-weight: bold; }}
+            .content {{ padding: 0 15px; font-size: 1rem; }}
+            h2 {{ color: #2c3e50; font-size: 1.4rem; margin-top: 30px; border-bottom: 2px solid #f5f5f5; padding-bottom: 5px; }}
+            li {{ margin-bottom: 8px; }}
+            a {{ color: #2980b9; text-decoration: none; }}
         </style>
     </head>
     <body>
-        {header_section} <div class="meta">UPDATED: {current_time}</div>
+        {header_section}
+        
+        <div class="meta">UPDATED: {current_time}</div>
         <h1>{topic}</h1>
         <img src="{img_url}" alt="Chart">
         
