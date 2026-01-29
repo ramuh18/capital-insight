@@ -16,7 +16,7 @@ DEVTO_TOKEN = get_env("DEVTO_TOKEN")
 BLOG_TITLE = "Global Market Watch"
 BLOG_BASE_URL = "https://ramuh18.github.io/zombie-bot/"
 
-# [광고 & 제휴 설정]
+# [광고 설정]
 EMPIRE_URL = "https://empire-analyst.digital/"
 AFFILIATE_LINK = "https://www.bybit.com/invite?ref=DOVWK5A" 
 AMAZON_TAG = "empireanalyst-20"
@@ -61,27 +61,67 @@ def get_hot_topic():
     return clean_title_aggressive(title)
 
 # ==========================================
-# [3. 히스토리 & 사이드바] (수정된 부분)
+# [3. 히스토리 & 사이트맵 & 아카이브]
 # ==========================================
 def load_and_sync_history():
     history = []
-    # 1. 로컬 파일 확인 (문법 수정됨)
     if os.path.exists(HISTORY_FILE):
         try:
             with open(HISTORY_FILE, "r") as f:
                 history = json.load(f)
-        except:
-            pass
-            
-    # 2. 서버 파일 확인
+        except: pass
     if not history:
         try:
             resp = requests.get(f"{BLOG_BASE_URL}{HISTORY_FILE}", timeout=5)
-            if resp.status_code == 200:
-                history = resp.json()
-        except:
-            pass
+            if resp.status_code == 200: history = resp.json()
+        except: pass
     return history
+
+def generate_sitemap(history):
+    sitemap_xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    sitemap_xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    sitemap_xml += f'  <url><loc>{BLOG_BASE_URL}</loc><changefreq>daily</changefreq><priority>1.0</priority></url>\n'
+    for h in history[:100]:
+        url = f"{BLOG_BASE_URL}{h['file']}"
+        date = h['date']
+        sitemap_xml += f'  <url><loc>{url}</loc><lastmod>{date}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>\n'
+    sitemap_xml += '</urlset>'
+    with open("sitemap.xml", "w", encoding="utf-8") as f: f.write(sitemap_xml)
+
+# ★ 전체 글 목록 페이지(archive.html) 생성 함수
+def generate_archive_page(history):
+    list_html = ""
+    for h in history:
+        full_url = f"{BLOG_BASE_URL}{h['file']}"
+        list_html += f"""
+        <div style="margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #eee;">
+            <div style="font-size:0.8rem; color:#888;">{h['date']}</div>
+            <a href="{full_url}" style="font-size:1.1rem; font-weight:bold; text-decoration:none; color:#333;">{h['title']}</a>
+        </div>
+        """
+    
+    archive_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Posts - {BLOG_TITLE}</title>
+    <style>
+        body {{ font-family: 'Merriweather', serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color:#333; }}
+        h1 {{ border-bottom: 4px solid #dc2626; padding-bottom: 10px; }}
+        a:hover {{ color: #dc2626; }}
+        .btn {{ display:inline-block; margin-top:20px; background:#0f172a; color:#fff; padding:10px 20px; text-decoration:none; border-radius:4px; }}
+    </style>
+</head>
+<body>
+    <h1>📂 All Market Reports</h1>
+    {list_html}
+    <a href="index.html" class="btn">← Back to Home</a>
+</body>
+</html>"""
+    
+    with open("archive.html", "w", encoding="utf-8") as f: f.write(archive_html)
+    log("📚 아카이브 페이지(archive.html) 생성 완료")
 
 def get_sidebar_recent_posts(history, current_title):
     html = "<ul class='recent-posts'>"
@@ -93,27 +133,12 @@ def get_sidebar_recent_posts(history, current_title):
         count += 1
         if count >= 5: break
     html += "</ul>"
+    # ★ 사이드바에 '전체 보기' 버튼 추가
+    html += f"<div style='margin-top:15px; text-align:right;'><a href='{BLOG_BASE_URL}archive.html' style='font-size:0.85rem; color:#dc2626;'>📂 View All Posts →</a></div>"
     return html
 
 # ==========================================
-# [4. 사이트맵 자동 생성]
-# ==========================================
-def generate_sitemap(history):
-    sitemap_xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
-    sitemap_xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    sitemap_xml += f'  <url><loc>{BLOG_BASE_URL}</loc><changefreq>daily</changefreq><priority>1.0</priority></url>\n'
-    for h in history[:50]:
-        url = f"{BLOG_BASE_URL}{h['file']}"
-        date = h['date']
-        sitemap_xml += f'  <url><loc>{url}</loc><lastmod>{date}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>\n'
-    sitemap_xml += '</urlset>'
-    
-    with open("sitemap.xml", "w", encoding="utf-8") as f:
-        f.write(sitemap_xml)
-    log("🗺️ 사이트맵 생성 완료")
-
-# ==========================================
-# [5. 본문 생성]
+# [4. 본문 생성]
 # ==========================================
 def generate_part(topic, focus):
     prompt = f"Write a professional financial analysis section on '{topic}'. Focus: {focus}. Length: 350 words. Use Markdown. Tone: Institutional."
@@ -130,11 +155,9 @@ def generate_part(topic, focus):
     return "Content generating..."
 
 # ==========================================
-# [6. HTML 템플릿 (인증 태그 포함)]
+# [5. HTML 템플릿]
 # ==========================================
 def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_url):
-    
-    # ★ 구글 인증 태그 (사용자님 코드)
     google_verification = '<meta name="google-site-verification" content="Jxh9S9J3S5_RBIpJH4CVrDkpRiDZ_mQ99TfIm7xK7YY" />'
     
     return f"""<!DOCTYPE html>
@@ -143,17 +166,15 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
     <meta charset="UTF-8">
     {google_verification}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Financial analysis on {topic}. Institutional market insights.">
+    <meta name="description" content="Financial analysis on {topic}.">
     <title>{topic} - {BLOG_TITLE}</title>
     <link rel="canonical" href="{canonical_url}" />
-    
     <meta property="og:type" content="article" />
     <meta property="og:title" content="{topic}" />
-    <meta property="og:description" content="Read full financial analysis." />
+    <meta property="og:description" content="Read full analysis." />
     <meta property="og:image" content="{img_url}" />
     <meta property="og:url" content="{canonical_url}" />
     <meta name="twitter:card" content="summary_large_image" />
-
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {{ --primary: #0f172a; --accent: #dc2626; --bg: #ffffff; --text: #334155; --sidebar: #f1f5f9; }}
@@ -195,7 +216,7 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
             <h3 style="font-family:'Roboto',sans-serif;font-size:0.9rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #cbd5e1;padding-bottom:8px;margin-bottom:15px;">👑 Official Headquarters</h3>
             <a href="{EMPIRE_URL}" class="ad-box ad-main">
                 <span class="ad-title">Empire Analyst HQ</span>
-                <span class="ad-desc">Premium Reports & Analysis →</span>
+                <span class="ad-desc">Deep Dive Analysis →</span>
             </a>
         </div>
         <div class="widget">
@@ -223,10 +244,10 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
 </html>"""
 
 # ==========================================
-# [7. 메인 실행]
+# [6. 메인 실행]
 # ==========================================
 def main():
-    log("🏁 봇 가동 (Syntax Fix)")
+    log("🏁 봇 가동 (Archive Added)")
     topic = get_hot_topic()
     log(f"🔥 주제: {topic}")
     
@@ -249,6 +270,7 @@ def main():
     with open(HISTORY_FILE, "w") as f: json.dump(history, f, indent=4)
     
     generate_sitemap(history)
+    generate_archive_page(history) # ★ 여기서 전체 글 목록 페이지 생성
     
     full_html = create_professional_html(topic, img_url, html_body, sidebar_html, full_url)
     
