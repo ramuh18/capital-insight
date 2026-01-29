@@ -2,13 +2,13 @@ import os, json, random, requests, markdown, urllib.parse, feedparser, time, re
 import sys, io
 from datetime import datetime
 
-# [핵심] 인코딩 강제 (외계어 방지)
+# [SYSTEM] Force UTF-8 encoding for currency symbols and special characters
 sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
 
 def log(msg): print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
-# [환경변수]
+# [ENV] Retrieve Environment Variables
 def get_env(key):
     val = os.environ.get(key, "")
     if not val: return ""
@@ -17,12 +17,12 @@ def get_env(key):
 GEMINI_API_KEY = get_env("GEMINI_API_KEY")
 DEVTO_TOKEN = get_env("DEVTO_TOKEN")
 
-# [브랜드 설정]
+# [BRAND CONFIGURATION]
 BLOG_TITLE = "Capital Insight"
 BLOG_DESC = "Global Financial Intelligence & Market Analysis"
 BLOG_BASE_URL = "https://ramuh18.github.io/capital-insight/"
 
-# [수익화 설정]
+# [MONETIZATION]
 EMPIRE_URL = "https://empire-analyst.digital/"
 AFFILIATE_LINK = "https://www.bybit.com/invite?ref=DOVWK5A" 
 AMAZON_TAG = "empireanalyst-20"
@@ -31,60 +31,62 @@ AMAZON_LINK = f"https://www.amazon.com/s?k=ledger+nano+x&tag={AMAZON_TAG}"
 HISTORY_FILE = "history.json"
 
 # ==========================================
-# [1. 텍스트 정제기 (AI 생각 지우개)]
+# [CLEANER] Remove AI Artifacts & JSON
 # ==========================================
 def clean_ai_output(text):
     if not text: return ""
-    # 1. JSON 형식으로 나온 생각(reasoning_content) 제거
-    text = re.sub(r'\{"role":.*?"reasoning_content":.*?"content":"', '', text, flags=re.DOTALL)
-    text = re.sub(r'"\}', '', text)
     
-    # 2. "Draft:", "Word count:", "Let's write" 같은 혼잣말 제거
-    patterns = [
-        r"Draft:", r"Word count:", r"Let's write", r"Note:", r"Here is the draft",
-        r"Internal Monologue:", r"Thinking Process:", r"Length: \d+ words"
-    ]
+    # 1. Extract content from JSON if present
+    if text.strip().startswith("{") and "reasoning_content" in text:
+        try:
+            match = re.search(r'"content"\s*:\s*"(.*?)"', text, re.DOTALL)
+            if match:
+                text = match.group(1).encode('utf-8').decode('unicode_escape')
+        except: pass
+
+    # 2. Remove JSON syntax leftovers
+    text = re.sub(r'\{"role":.*?"content":', '', text, flags=re.DOTALL)
+    text = text.replace('"}', '').replace('"', '').replace("'", "")
+    
+    # 3. Remove conversational fillers
+    patterns = [r"Draft:", r"Word count:", r"Let's write", r"Note:", r"Internal Monologue:"]
     for p in patterns:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
-    
-    # 3. 마크다운 기호 정리
-    text = text.strip().replace('"', '').replace("'", "")
+        
     return text.strip()
 
 # ==========================================
-# [2. 주제 선정]
+# [TOPIC SELECTION]
 # ==========================================
 def get_hot_topic():
     try:
+        # Google News RSS (US Business Edition)
         feed = feedparser.parse("https://news.google.com/rss/topics/CAAqJggBCiCPASowCAcLCzIxY2J1c2luZXNzX2VkaXRpb25fZW5fdXMvYnVzaW5lc3NfZWRpdGlvbl9lbl91cw?hl=en-US&gl=US&ceid=US:en")
         raw_news = random.choice(feed.entries[:5]).title if feed.entries else "Global Market Outlook"
     except: raw_news = "Bitcoin & Crypto Trends"
 
-    prompt = f"Rewrite '{raw_news}' into a high-end financial report title (MAX 9 WORDS). Professional tone. English Only. Output ONLY the title."
+    prompt = f"Rewrite '{raw_news}' into a high-end financial report title (MAX 9 WORDS). Professional tone. English Only. Output ONLY the title text."
     
     title = "Market Intelligence Report"
     for _ in range(2):
         try:
             if GEMINI_API_KEY:
-                # ★ 중요: 생각 기능 끄는 파라미터 추가
                 url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.3} # 창의성 낮춰서 딴소리 방지
-                }
+                payload = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0.1}}
                 resp = requests.post(url, json=payload, timeout=15)
                 if resp.status_code == 200:
-                    title = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                    raw = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                    title = clean_ai_output(raw)
                     break
             url = f"https://text.pollinations.ai/{urllib.parse.quote(prompt)}"
             resp = requests.get(url, timeout=30)
-            title = resp.text
+            title = clean_ai_output(resp.text)
             break
         except: time.sleep(1)
-    return clean_ai_output(title)
+    return title
 
 # ==========================================
-# [3. 히스토리 & 사이트맵]
+# [HISTORY & SITEMAP]
 # ==========================================
 def load_and_sync_history():
     history = []
@@ -110,6 +112,7 @@ def generate_sitemap(history):
         date = h['date']
         sitemap_xml += f'  <url><loc>{url}</loc><lastmod>{date}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>\n'
     sitemap_xml += '</urlset>'
+    
     with open("sitemap.xml", "w", encoding="utf-8") as f: f.write(sitemap_xml)
 
 def generate_archive_page(history):
@@ -123,6 +126,7 @@ def generate_archive_page(history):
         </div>
         """
     archive_html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Reports Archive - {BLOG_TITLE}</title><link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&display=swap" rel="stylesheet"><style>body{{font-family:'Merriweather', serif;line-height:1.6;max-width:800px;margin:0 auto;padding:20px;color:#333;}}h1{{border-bottom:4px solid #0f172a;padding-bottom:10px;}}a:hover{{color:#b91c1c;}}.btn{{display:inline-block;margin-top:20px;background:#0f172a;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px;}}</style></head><body><h1>📂 Capital Insight Reports</h1>{list_html}<a href="index.html" class="btn">← Back to Dashboard</a></body></html>"""
+    
     with open("archive.html", "w", encoding="utf-8") as f: f.write(archive_html)
 
 def get_sidebar_recent_posts(history, current_title):
@@ -139,25 +143,20 @@ def get_sidebar_recent_posts(history, current_title):
     return html
 
 # ==========================================
-# [4. 본문 생성 (강력 필터링)]
+# [CONTENT GENERATION]
 # ==========================================
 def generate_part(topic, focus):
-    # ★ 프롬프트 강화: 결과물만 내놓으라고 협박(?)
-    prompt = f"Write a professional financial analysis section on '{topic}'. Focus: {focus}. Length: 350 words. Use Markdown. Tone: Institutional. Language: English Only. DO NOT output drafting notes, internal monologue, or JSON. Just output the article content directly."
+    prompt = f"Write a professional financial analysis section on '{topic}'. Focus: {focus}. Length: 350 words. Use Markdown. Tone: Institutional. Language: English Only. STRICTLY output ONLY the final article text. Do NOT include drafting notes, internal monologue, or JSON formats."
     
     for _ in range(2):
         try:
             if GEMINI_API_KEY:
                 url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY
-                # ★ 중요: Temperature를 0.2로 낮춰서 창의성을 죽이고 기계적으로 답변하게 만듦
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.2} 
-                }
+                payload = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0.2}}
                 resp = requests.post(url, json=payload, timeout=30)
                 if resp.status_code == 200: 
                     raw_text = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                    return clean_ai_output(raw_text) # ★ 여기서 한번 더 씻어냄
+                    return clean_ai_output(raw_text)
             
             url = f"https://text.pollinations.ai/{urllib.parse.quote(prompt)}"
             resp = requests.get(url, timeout=45)
@@ -166,7 +165,7 @@ def generate_part(topic, focus):
     return "Generating market analysis..."
 
 # ==========================================
-# [5. HTML 템플릿]
+# [HTML TEMPLATE]
 # ==========================================
 def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_url):
     google_verification = '<meta name="google-site-verification" content="Jxh9S9J3S5_RBIpJH4CVrDkpRiDZ_mQ99TfIm7xK7YY" />'
@@ -279,7 +278,7 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
 </html>"""
 
 # ==========================================
-# [6. 메인 실행]
+# [MAIN EXECUTION]
 # ==========================================
 def main():
     log("🏁 Capital Insight Bot Started")
@@ -291,11 +290,11 @@ def main():
     content += generate_part(topic, "Technical Analysis") + "\n\n"
     content += generate_part(topic, "Strategic Action")
     
-    # AI 찌꺼기 한번 더 제거
+    # Final cleanup of AI artifacts
     content = clean_ai_output(content)
     html_body = markdown.markdown(content)
     
-    # [랜덤 스타일 생성]
+    # [Random Style Generation]
     styles = ["cinematic 8k detailed", "futuristic data visualization", "minimalist blueprint", "clean corporate chart", "professional financial report style"]
     angles = ["wide angle view", "close up on screen", "isometric view", "from a trading desk"]
     colors = ["blue and purple", "green and gold", "monochrome dark", "orange and teal", "navy and white"]
