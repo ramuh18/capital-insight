@@ -1,6 +1,9 @@
 import os, json, random, requests, markdown, urllib.parse, feedparser, tweepy, time, re
 from datetime import datetime
 
+# ==========================================
+# [기본 설정 및 로그]
+# ==========================================
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
@@ -9,7 +12,7 @@ def get_env(key):
     if not val or "***" in val: return ""
     return val.strip()
 
-# [설정]
+# 환경변수 및 링크 설정
 AMAZON_TAG = "empireanalyst-20"
 BYBIT_LINK = "https://www.bybit.com/invite?ref=DOVWK5A"
 BLOG_BASE_URL = "https://ramuh18.github.io/zombie-bot/"
@@ -22,24 +25,31 @@ X_API_SECRET = get_env("X_API_SECRET")
 X_ACCESS_TOKEN = get_env("X_ACCESS_TOKEN")
 X_ACCESS_TOKEN_SECRET = get_env("X_ACCESS_TOKEN_SECRET")
 
-# [1. 주제 선정]
+# ==========================================
+# [1. 주제 선정 엔진]
+# ==========================================
 def get_hot_topic():
     topics = [
-        "Bitcoin Supercycle: 2026 Price Targets",
-        "Global Recession & Gold: The Ultimate Hedge",
-        "AI Tech Bubble: Institutional Exit Strategy",
-        "Ethereum ETF: On-Chain Data Analysis",
-        "Federal Reserve Pivot: Market Impact Study"
+        "Bitcoin Supercycle 2026: Institutional Analysis",
+        "Gold vs US Dollar: The Ultimate Hedge Strategy",
+        "AI Tech Bubble: Risk Assessment & Outlook",
+        "Global Liquidity Crisis: Crypto Market Impact",
+        "Ethereum ETF Flows: On-Chain Data Review"
     ]
     try:
+        # 구글 뉴스에서 실시간 트렌드 확인 시도
         feed = feedparser.parse("https://news.google.com/rss/topics/CAAqJggBCiCPASowCAcLCzIxY2J1c2luZXNzX2VkaXRpb25fZW5fdXMvYnVzaW5lc3NfZWRpdGlvbl9lbl91cw?hl=en-US&gl=US&ceid=US:en")
         if feed.entries: return feed.entries[0].title
     except: pass
     return random.choice(topics)
 
-# [2. 글 세척기]
+# ==========================================
+# [2. 텍스트 세척 엔진 (외계어/광고 제거)]
+# ==========================================
 def clean_chunk(text):
     text = text.strip()
+    
+    # JSON 껍데기 제거
     if text.startswith("{"):
         try:
             data = json.loads(text)
@@ -47,76 +57,86 @@ def clean_chunk(text):
             elif 'choices' in data: text = data['choices'][0]['message']['content']
         except: pass
     
-    # 잡설 제거
-    patterns = [r"Powered by Pollinations.*", r"Running on free AI.*", r"Here is the.*", r"Sure, I can.*"]
+    # 잡설 및 타 AI 광고 문구 제거
+    patterns = [
+        r"Powered by Pollinations.*", r"Running on free AI.*", 
+        r"Here is the.*", r"Sure, I can.*", r"In this report.*",
+        r"Image:.*", r"🌸 Ad 🌸.*"
+    ]
     for p in patterns:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
     
-    # 마크다운 헤더 정리 (제목 중복 방지용)
+    # 마크다운 제목(#) 중복 방지 (첫 줄이 제목이면 제거)
     if text.startswith("# "): 
-        text = text[text.find("\n"):] # 첫 줄(큰 제목)은 제거하고 본문만 씀
+        text = text[text.find("\n"):]
         
     return text.strip()
 
-# [3. 파트별 생성 함수 (핵심)]
-def generate_part(topic, section_prompt):
-    full_prompt = f"""
+# ==========================================
+# [3. 콘텐츠 생성 엔진 (3단 합체 - 롱폼 전략)]
+# ==========================================
+def generate_part(topic, section_focus):
+    """각 섹션별로 400단어 이상씩 쓰게 해서 이어 붙임"""
+    prompt = f"""
     Act as a Senior Financial Analyst. Write a DETAILED section for a report on '{topic}'.
-    Focus specifically on: {section_prompt}
-    Length: Write at least 400 words.
+    Focus ONLY on: {section_focus}
+    Length: Minimum 400 words. Deep dive.
     Format: Markdown (use ## for subheadings).
-    NO JSON. NO INTROS.
+    NO JSON. NO INTROS. NO FILLER.
     """
     
     for attempt in range(2):
         try:
-            # Gemini
+            # 1순위: Gemini
             if GEMINI_API_KEY:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-                resp = requests.post(url, json={"contents": [{"parts": [{"text": full_prompt}]}]}, timeout=45)
+                resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=45)
                 if resp.status_code == 200:
                     return clean_chunk(resp.json()['candidates'][0]['content']['parts'][0]['text'])
 
-            # Pollinations
-            url = f"https://text.pollinations.ai/{urllib.parse.quote(full_prompt)}"
+            # 2순위: Pollinations
+            url = f"https://text.pollinations.ai/{urllib.parse.quote(prompt)}"
             resp = requests.get(url, timeout=60)
             return clean_chunk(resp.text)
         except: time.sleep(1)
     
-    return f"## Analysis Update\nData for {section_prompt} is currently processing."
+    return f"## Analysis Update\nData for {section_focus} is currently processing."
 
-# [4. 3단 합체 생성기]
 def generate_full_report(topic):
-    log(f"🧠 주제: {topic} (3단 합체 시작)")
+    log(f"🧠 주제: {topic} (3단 합체 작성 시작)")
     
-    # 파트 1: 서론 & 거시경제
-    log("✍️ Part 1: Macro Analysis 작성 중...")
-    part1 = generate_part(topic, "Executive Summary, Macroeconomic Backdrop, and Interest Rate Outlook.")
+    # Part 1: 서론 & 거시경제
+    log("✍️ Part 1 작성 중...")
+    part1 = generate_part(topic, "Executive Summary, Macroeconomic Backdrop, Interest Rates, and Inflation Data.")
     
-    # 파트 2: 기관 동향 & 기술적 분석
-    log("✍️ Part 2: Institutional & Technical 작성 중...")
-    part2 = generate_part(topic, "Institutional Capital Flows, ETF Data, and Technical Analysis (Support/Resistance).")
+    # Part 2: 기관 & 기술적 분석
+    log("✍️ Part 2 작성 중...")
+    part2 = generate_part(topic, "Institutional Capital Flows, ETF Holdings, Smart Money positioning, and Technical Analysis.")
     
-    # 파트 3: 리스크 & 전략
-    log("✍️ Part 3: Strategy & Conclusion 작성 중...")
-    part3 = generate_part(topic, "Geopolitical Risks, Regulatory Environment, and Final Investment Strategy.")
+    # Part 3: 전망 & 전략
+    log("✍️ Part 3 작성 중...")
+    part3 = generate_part(topic, "Geopolitical Risks, Future Outlook, and Actionable Investment Strategy.")
     
-    # 합체
     full_text = f"{part1}\n\n{part2}\n\n{part3}"
-    log(f"✅ 전체 리포트 완성 (길이: {len(full_text)}자)")
+    log(f"✅ 리포트 완성 (총 길이: {len(full_text)}자)")
     return full_text
 
-# [5. 메인 실행]
+# ==========================================
+# [4. 메인 실행 & 디자인 조립]
+# ==========================================
 def main():
-    log("🏁 Empire Analyst (Mega-Long Ver) 가동")
+    log("🏁 Empire Analyst (Final Version) 가동")
     topic = get_hot_topic()
+    
+    # 글 생성 및 HTML 변환
     raw_md = generate_full_report(topic)
     html_content = markdown.markdown(raw_md)
     
+    # 동적 요소
     img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(topic + ' chart 8k')}"
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
     
-    # 디자인 요소들
+    # [디자인] 1. 슬림 블랙 헤더
     header_section = f"""
     <div style="background: #000; color: white; padding: 20px 15px; text-align: center; border-radius: 0 0 15px 15px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
         <div style="font-family: serif; font-size: 1.8rem; font-weight: 800; letter-spacing: 1px; line-height: 1;">EMPIRE ANALYST</div>
@@ -124,6 +144,7 @@ def main():
     </div>
     """
 
+    # [디자인] 2. 광고 섹션 (바이비트/아마존 고정)
     ads_section = f"""
     <div style="margin: 40px 0; padding: 25px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 10px; text-align: center;">
         <h3 style="margin-top: 0; font-size: 1.2rem; color: #333;">⚡ Strategic Allocation</h3>
@@ -134,6 +155,7 @@ def main():
     </div>
     """
 
+    # [디자인] 3. 푸터
     footer_section = f"""
     <div style="margin-top: 50px; padding: 30px 20px; background: #111; color: white; border-radius: 12px; text-align: center;">
         <h3 style="color: white; margin: 0 0 15px 0; font-size: 1.2rem;">Empire Analyst HQ</h3>
@@ -141,6 +163,7 @@ def main():
     </div>
     """
 
+    # [디자인] 4. 전체 HTML 조립
     full_html = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -171,14 +194,18 @@ def main():
     </html>
     """
 
+    # 파일 저장
     try:
         with open("index.html", "w", encoding="utf-8") as f: f.write(full_html)
-        log("✅ index.html 저장 완료")
+        log("✅ index.html 파일 저장 완료")
     except Exception as e: log(f"❌ 저장 실패: {e}")
 
+    # Dev.to 업로드
     if DEVTO_TOKEN:
         try: requests.post("https://dev.to/api/articles", headers={"api-key": DEVTO_TOKEN}, json={"article": {"title": topic, "published": True, "body_markdown": raw_md, "canonical_url": BLOG_BASE_URL}}, timeout=10)
         except: pass
+    
+    # X(트위터) 업로드
     if X_API_KEY:
         try:
             client = tweepy.Client(X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET)
