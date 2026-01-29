@@ -38,11 +38,11 @@ jobs:
         X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
       run: python zombie_bot.py
 
-    - name: Commit and Push Changes
+    - name: Force Push Changes (Bulldozer Mode)
       run: |
         git config --global user.name "Zombie Bot"
         git config --global user.email "bot@zombie.com"
         git add index.html
+        # 충돌이 나든 말든 강제로 내 것이 맞다고 우김
         git commit -m "📝 Daily Update: $(date)" || exit 0
-        git pull --rebase origin main
-        git push
+        git push -f origin main
