@@ -1,9 +1,6 @@
 import os, json, random, requests, markdown, urllib.parse, feedparser, time, re
 from datetime import datetime
 
-# ... (위쪽 설정 코드들은 그대로 둡니다. 너무 기니까 생략하고 아래 main 함수만 바꿉니다.) ...
-# ... 아래 코드를 기존 zombie_bot.py에 전체 덮어씌우세요 ...
-
 def log(msg): print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 # [환경변수]
@@ -15,12 +12,14 @@ def get_env(key):
 GEMINI_API_KEY = get_env("GEMINI_API_KEY")
 DEVTO_TOKEN = get_env("DEVTO_TOKEN")
 
-# [★브랜드 리브랜딩]
-BLOG_TITLE = "Empire Market Intelligence"
-BLOG_DESC = "Daily Crypto & Global Finance Briefing"
-BLOG_BASE_URL = "https://ramuh18.github.io/zombie-bot/"
+# [★브랜드 설정: Capital Insight]
+BLOG_TITLE = "Capital Insight"
+BLOG_DESC = "Global Financial Intelligence & Market Analysis"
 
-# [수익화 설정]
+# [★주소 변경 완료]
+BLOG_BASE_URL = "https://ramuh18.github.io/capital-insight/"
+
+# [수익화 & 광고 설정]
 EMPIRE_URL = "https://empire-analyst.digital/"
 AFFILIATE_LINK = "https://www.bybit.com/invite?ref=DOVWK5A" 
 AMAZON_TAG = "empireanalyst-20"
@@ -46,7 +45,7 @@ def get_hot_topic():
         raw_news = random.choice(feed.entries[:5]).title if feed.entries else "Bitcoin Analysis"
     except: raw_news = "Crypto Market Update"
 
-    prompt = f"Rewrite '{raw_news}' into a high-end financial newsletter title (MAX 9 WORDS). Professional, trustworthy tone."
+    prompt = f"Rewrite '{raw_news}' into a high-end financial report title (MAX 9 WORDS). Professional, trustworthy tone like Bloomberg."
     
     title = "Market Update"
     for _ in range(2):
@@ -102,7 +101,7 @@ def generate_archive_page(history):
             <a href="{full_url}" style="font-size:1.1rem; font-weight:bold; text-decoration:none; color:#333;">{h['title']}</a>
         </div>
         """
-    archive_html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Archive - {BLOG_TITLE}</title><style>body{{font-family:'Merriweather',serif;line-height:1.6;max-width:800px;margin:0 auto;padding:20px;color:#333;}}h1{{border-bottom:4px solid #0f172a;padding-bottom:10px;}}a:hover{{color:#dc2626;}}.btn{{display:inline-block;margin-top:20px;background:#0f172a;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px;}}</style></head><body><h1>📂 Intelligence Archive</h1>{list_html}<a href="index.html" class="btn">← Back to Briefing</a></body></html>"""
+    archive_html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Reports Archive - {BLOG_TITLE}</title><style>body{{font-family:'Merriweather',serif;line-height:1.6;max-width:800px;margin:0 auto;padding:20px;color:#333;}}h1{{border-bottom:4px solid #0f172a;padding-bottom:10px;}}a:hover{{color:#b91c1c;}}.btn{{display:inline-block;margin-top:20px;background:#0f172a;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px;}}</style></head><body><h1>📂 Capital Insight Reports</h1>{list_html}<a href="index.html" class="btn">← Back to Dashboard</a></body></html>"""
     with open("archive.html", "w", encoding="utf-8") as f: f.write(archive_html)
 
 def get_sidebar_recent_posts(history, current_title):
@@ -115,14 +114,14 @@ def get_sidebar_recent_posts(history, current_title):
         count += 1
         if count >= 5: break
     html += "</ul>"
-    html += f"<div style='margin-top:15px; text-align:right;'><a href='{BLOG_BASE_URL}archive.html' style='font-size:0.85rem; color:#dc2626; font-weight:bold;'>📂 View Full Archive →</a></div>"
+    html += f"<div style='margin-top:15px; text-align:right;'><a href='{BLOG_BASE_URL}archive.html' style='font-size:0.85rem; color:#b91c1c; font-weight:bold;'>📂 View Full Archive →</a></div>"
     return html
 
 # ==========================================
 # [4. 본문 생성]
 # ==========================================
 def generate_part(topic, focus):
-    prompt = f"Write a professional financial newsletter section on '{topic}'. Focus: {focus}. Length: 350 words. Use Markdown. Tone: Institutional, Analytical, Trustworthy."
+    prompt = f"Write a professional financial analysis section on '{topic}'. Focus: {focus}. Length: 350 words. Use Markdown. Tone: Institutional, Analytical, Trustworthy."
     for _ in range(2):
         try:
             if GEMINI_API_KEY:
@@ -133,7 +132,7 @@ def generate_part(topic, focus):
             resp = requests.get(url, timeout=45)
             return resp.text
         except: time.sleep(1)
-    return "Analyzing market data..."
+    return "Market data analysis pending..."
 
 # ==========================================
 # [5. HTML 템플릿]
@@ -148,13 +147,13 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
     <meta charset="UTF-8">
     {google_verification}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Daily financial briefing on {topic}. Empire Market Intelligence provided by advanced analysis.">
+    <meta name="description" content="Capital Insight: Daily financial briefing on {topic}. Global market intelligence and crypto analysis.">
     <title>{topic} | {BLOG_TITLE}</title>
     <link rel="canonical" href="{canonical_url}" />
     
     <meta property="og:type" content="article" />
     <meta property="og:title" content="{topic}" />
-    <meta property="og:description" content="Read the full daily briefing." />
+    <meta property="og:description" content="Capital Insight Daily Briefing." />
     <meta property="og:image" content="{img_url}" />
     <meta property="og:url" content="{canonical_url}" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -202,19 +201,19 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
     <div class="header-wrap">
         <div class="brand">{BLOG_TITLE}</div>
         <div class="sub-brand">{BLOG_DESC}</div>
-        <div class="date-badge">📅 DAILY BRIEFING #{current_date}</div>
+        <div class="date-badge">📅 DAILY REPORT #{current_date}</div>
     </div>
 </header>
 <div class="container">
     <main>
         <article>
-            <div class="meta-info">Global Markets • Crypto • {current_date}</div>
+            <div class="meta-info">Global Markets • Intelligence • {current_date}</div>
             <h1>{topic}</h1>
-            <img src="{img_url}" class="featured-img" alt="{topic} Chart">
+            <img src="{img_url}" class="featured-img" alt="{topic} Visualization">
             {body_html}
             <div style="margin-top:40px; padding:20px; background:#f1f5f9; border-left:4px solid var(--primary); font-size:0.9rem;">
-                <strong>💡 Editor's Note:</strong> This briefing is generated for informational purposes. Always do your own research.
-                <br>Bookmark this page (Ctrl+D) to get daily market intelligence.
+                <strong>💡 Analyst Note:</strong> This report provides market intelligence for informational purposes.
+                <br>Bookmark <strong>Capital Insight</strong> (Ctrl+D) for daily updates.
             </div>
         </article>
     </main>
@@ -223,25 +222,25 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
             <h3>👑 Official Headquarters</h3>
             <a href="{EMPIRE_URL}" class="ad-box ad-main">
                 <span class="ad-title">Empire Analyst HQ</span>
-                <span class="ad-desc">Get Full Institutional Reports & Deep Dive Analysis →</span>
+                <span class="ad-desc">Institutional Grade Analysis & Premium Reports →</span>
             </a>
         </div>
         <div class="widget">
-            <h3>🚀 Limited Offer</h3>
+            <h3>🚀 Limited Bonus</h3>
             <a href="{AFFILIATE_LINK}" class="ad-box ad-affiliate">
-                <span class="ad-title">💰 $30,000 Bonus</span>
-                <span class="ad-desc">Exclusive Sign-up Reward for New Traders</span>
+                <span class="ad-title">💰 $30,000 Reward</span>
+                <span class="ad-desc">Exclusive Welcome Bonus for New Traders</span>
             </a>
         </div>
         <div class="widget">
-            <h3>🛡️ Security Essentials</h3>
+            <h3>🛡️ Asset Security</h3>
             <a href="{AMAZON_LINK}" class="ad-box ad-amazon">
                 <span class="ad-title">📦 Hardware Wallets</span>
-                <span class="ad-desc">Secure Your Crypto with Ledger (Amazon Official)</span>
+                <span class="ad-desc">Official Ledger Store on Amazon (Secure Buy)</span>
             </a>
         </div>
         <div class="widget">
-            <h3>📂 Recent Intelligence</h3>
+            <h3>📂 Recent Reports</h3>
             {sidebar_html}
         </div>
     </aside>
@@ -262,9 +261,9 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
 # [6. 메인 실행 (랜덤 이미지 스타일 적용)]
 # ==========================================
 def main():
-    log("🏁 봇 가동 (Random Image Style)")
+    log("🏁 Capital Insight Bot Started")
     topic = get_hot_topic()
-    log(f"🔥 주제: {topic}")
+    log(f"🔥 Subject: {topic}")
     
     content = ""
     content += generate_part(topic, "Macro Outlook") + "\n\n"
@@ -272,16 +271,15 @@ def main():
     content += generate_part(topic, "Strategic Action")
     html_body = markdown.markdown(content)
     
-    # [★여기! 이미지 생성 프롬프트에 랜덤 스타일 적용]
-    # 매번 다른 스타일, 다른 구도, 다른 색감을 강제로 섞습니다.
+    # [랜덤 스타일 생성]
     styles = ["cinematic 8k detailed", "futuristic data visualization", "minimalist blueprint", "dark mode cyberpunk", "abstract geometric patterns"]
     angles = ["wide angle view", "close up on screen", "isometric view", "from a trading desk"]
-    colors = ["blue and purple", "green and gold", "monochrome dark", "orange and teal"]
+    colors = ["blue and purple", "green and gold", "monochrome dark", "orange and teal", "red and black"]
     
     random_style = f"{random.choice(styles)}, {random.choice(angles)}, {random.choice(colors)} theme"
     image_prompt = f"financial chart visualization about {topic}, {random_style}, no text, high quality"
     
-    log(f"🎨 이미지 스타일: {random_style}") # 로그로 확인 가능
+    log(f"🎨 Image Style: {random_style}")
     
     img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(image_prompt)}"
     
@@ -303,14 +301,14 @@ def main():
     
     with open("index.html", "w", encoding="utf-8") as f: f.write(full_html)
     with open(archive_filename, "w", encoding="utf-8") as f: f.write(full_html)
-    log("✅ 생성 완료")
+    log("✅ Generation Complete")
 
     if DEVTO_TOKEN:
         try:
-            dev_md = f"# {topic}\n\n![Chart]({img_url})\n\n{content}\n\n## 🔗 Full Briefing\n[Read on Empire Market Intelligence]({full_url})"
+            dev_md = f"# {topic}\n\n![Chart]({img_url})\n\n{content}\n\n## 🔗 Full Report\n[Read on Capital Insight]({full_url})"
             payload = {"article": {"title": topic, "published": True, "body_markdown": dev_md, "tags": ["finance", "crypto"], "canonical_url": full_url}}
             requests.post("https://dev.to/api/articles", headers={"api-key": DEVTO_TOKEN}, json=payload, timeout=15)
-            log("✅ Dev.to 성공")
+            log("✅ Dev.to Posted")
         except: pass
 
 if __name__ == "__main__": main()
