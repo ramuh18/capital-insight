@@ -1,6 +1,9 @@
 import os, json, random, requests, markdown, urllib.parse, feedparser, time, re
 from datetime import datetime
 
+# ... (위쪽 설정 코드들은 그대로 둡니다. 너무 기니까 생략하고 아래 main 함수만 바꿉니다.) ...
+# ... 아래 코드를 기존 zombie_bot.py에 전체 덮어씌우세요 ...
+
 def log(msg): print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 # [환경변수]
@@ -12,8 +15,7 @@ def get_env(key):
 GEMINI_API_KEY = get_env("GEMINI_API_KEY")
 DEVTO_TOKEN = get_env("DEVTO_TOKEN")
 
-# [★브랜드 리브랜딩: 좀비 봇 흔적 지우기]
-# URL은 zombie-bot이어도, 보여지는 이름은 'Empire Market Intelligence'입니다.
+# [★브랜드 리브랜딩]
 BLOG_TITLE = "Empire Market Intelligence"
 BLOG_DESC = "Daily Crypto & Global Finance Briefing"
 BLOG_BASE_URL = "https://ramuh18.github.io/zombie-bot/"
@@ -134,7 +136,7 @@ def generate_part(topic, focus):
     return "Analyzing market data..."
 
 # ==========================================
-# [5. HTML 템플릿 (신뢰도 & 법적 면책 강화)]
+# [5. HTML 템플릿]
 # ==========================================
 def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_url):
     google_verification = '<meta name="google-site-verification" content="Jxh9S9J3S5_RBIpJH4CVrDkpRiDZ_mQ99TfIm7xK7YY" />'
@@ -162,7 +164,6 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
         :root {{ --primary: #0f172a; --accent: #b91c1c; --bg: #ffffff; --text: #334155; --sidebar: #f8fafc; }}
         body {{ font-family: 'Merriweather', serif; line-height: 1.8; color: var(--text); background: var(--bg); margin: 0; }}
         
-        /* 뉴스레터 스타일 헤더 */
         header {{ background: var(--primary); color: #fff; padding: 25px 0; border-bottom: 5px solid var(--accent); }}
         .header-wrap {{ max-width: 1100px; margin: 0 auto; padding: 0 20px; text-align: center; }}
         .brand {{ font-family: 'Roboto', sans-serif; font-size: 2.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }}
@@ -175,9 +176,8 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
         h1 {{ font-size: 2.4rem; color: #0f172a; line-height: 1.25; margin-top: 0; font-weight: 900; }}
         .meta-info {{ font-family: 'Roboto', sans-serif; font-size: 0.85rem; color: #64748b; margin-bottom: 20px; font-weight: 500; text-transform: uppercase; }}
         
-        .featured-img {{ width: 100%; height: auto; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+        .featured-img {{ width: 100%; height: auto; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-height: 300px; background: #f0f0f0; }}
         
-        /* 사이드바 & 광고 */
         .sidebar {{ background: var(--sidebar); padding: 30px; border-radius: 12px; height: fit-content; border: 1px solid #e2e8f0; }}
         .widget {{ margin-bottom: 40px; }}
         .widget h3 {{ font-family: 'Roboto', sans-serif; font-size: 0.85rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 20px; font-weight: 700; }}
@@ -210,7 +210,7 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
         <article>
             <div class="meta-info">Global Markets • Crypto • {current_date}</div>
             <h1>{topic}</h1>
-            <img src="{img_url}" class="featured-img" alt="{topic}">
+            <img src="{img_url}" class="featured-img" alt="{topic} Chart">
             {body_html}
             <div style="margin-top:40px; padding:20px; background:#f1f5f9; border-left:4px solid var(--primary); font-size:0.9rem;">
                 <strong>💡 Editor's Note:</strong> This briefing is generated for informational purposes. Always do your own research.
@@ -259,10 +259,10 @@ def create_professional_html(topic, img_url, body_html, sidebar_html, canonical_
 </html>"""
 
 # ==========================================
-# [6. 메인 실행]
+# [6. 메인 실행 (랜덤 이미지 스타일 적용)]
 # ==========================================
 def main():
-    log("🏁 봇 가동 (Trust & Compliance Upgrade)")
+    log("🏁 봇 가동 (Random Image Style)")
     topic = get_hot_topic()
     log(f"🔥 주제: {topic}")
     
@@ -272,10 +272,22 @@ def main():
     content += generate_part(topic, "Strategic Action")
     html_body = markdown.markdown(content)
     
+    # [★여기! 이미지 생성 프롬프트에 랜덤 스타일 적용]
+    # 매번 다른 스타일, 다른 구도, 다른 색감을 강제로 섞습니다.
+    styles = ["cinematic 8k detailed", "futuristic data visualization", "minimalist blueprint", "dark mode cyberpunk", "abstract geometric patterns"]
+    angles = ["wide angle view", "close up on screen", "isometric view", "from a trading desk"]
+    colors = ["blue and purple", "green and gold", "monochrome dark", "orange and teal"]
+    
+    random_style = f"{random.choice(styles)}, {random.choice(angles)}, {random.choice(colors)} theme"
+    image_prompt = f"financial chart visualization about {topic}, {random_style}, no text, high quality"
+    
+    log(f"🎨 이미지 스타일: {random_style}") # 로그로 확인 가능
+    
+    img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(image_prompt)}"
+    
     file_timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     archive_filename = f"post_{file_timestamp}.html"
     full_url = f"{BLOG_BASE_URL}{archive_filename}"
-    img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote('financial chart ' + topic)}"
     
     history = load_and_sync_history()
     sidebar_html = get_sidebar_recent_posts(history, topic)
