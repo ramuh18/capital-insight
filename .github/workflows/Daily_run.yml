@@ -21,16 +21,19 @@ jobs:
           python-version: '3.10'
 
       - name: 라이브러리 설치
-        # [수정] textwrap은 기본 내장이라 여기서 뺐습니다. 이제 에러 안 납니다.
         run: pip install requests markdown
 
       - name: 봇 실행
         run: python zombie_bot.py
 
-      - name: 결과 저장 및 배포
+      - name: 결과 저장 및 배포 (충돌 방지 기능 추가)
         run: |
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "action@github.com"
           git add .
           git commit -m "Auto Update: $(date)" || echo "No changes"
+          
+          # [핵심] 서버의 최신 변경사항을 먼저 가져와서 합칩니다 (충돌 해결)
+          git pull origin main --rebase
+          
           git push
