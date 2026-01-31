@@ -12,7 +12,7 @@ BLOG_BASE_URL = "https://ramuh18.github.io/capital-insight/"
 EMPIRE_URL = "https://empire-analyst.digital/"
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 AFFILIATE_LINK = "https://www.bybit.com/invite?ref=DOVWK5A" 
-# [수정] 고정된 아마존 링크 삭제 -> 함수에서 동적으로 생성
+# 아마존 링크는 아래 함수에서 주제별로 자동 생성됩니다.
 
 # [주제 리스트 50개]
 BACKUP_TOPICS = [
@@ -99,22 +99,23 @@ CONTENT_BLOCKS = [
     """
 ]
 
-# [스마트 매칭] 주제에 따라 아마존 검색어를 자동으로 바꿔주는 함수
+# [스마트 매칭 수정 완료] for in -> for x in 으로 문법 오류 해결
 def get_smart_amazon_link(topic):
     topic_lower = topic.lower()
     search_keyword = "wealth+preservation" # 기본값
     button_text = "🛡️ SECURE ASSETS"
 
-    if any(x in topic_lower for in ["gold", "silver", "metal", "commodity"]):
+    # [수정된 부분] for x in ... 으로 정확하게 변수 x를 추가했습니다.
+    if any(x in topic_lower for x in ["gold", "silver", "metal", "commodity"]):
         search_keyword = "gold+bars+and+coins"
         button_text = "💰 BUY REAL GOLD"
-    elif any(x in topic_lower for in ["food", "energy", "survival", "crisis", "collapse"]):
+    elif any(x in topic_lower for x in ["food", "energy", "survival", "crisis", "collapse"]):
         search_keyword = "emergency+food+supply+25+year"
         button_text = "🥫 SURVIVAL GEAR"
-    elif any(x in topic_lower for in ["crypto", "bitcoin", "digital", "cbdc", "wallet", "ledger"]):
+    elif any(x in topic_lower for x in ["crypto", "bitcoin", "digital", "cbdc", "wallet", "ledger"]):
         search_keyword = "ledger+nano+x"
         button_text = "🔐 HARDWARE WALLET"
-    elif any(x in topic_lower for in ["book", "reading", "inflation", "debt", "money"]):
+    elif any(x in topic_lower for x in ["book", "reading", "inflation", "debt", "money"]):
         search_keyword = "investing+books+best+sellers"
         button_text = "📚 BEST BOOKS"
     
@@ -133,10 +134,10 @@ def generate_deep_report(topic):
 The global financial system is flashing warning signals regarding **{topic}**. While the masses are unaware, a systemic shift is underway that will redefine wealth distribution for the next decade. This report exposes the reality of {topic} and provides a roadmap for preservation.
 """
     
-    # [스마트 매칭] 주제에 맞는 아마존 링크와 버튼 텍스트 가져오기
+    # [스마트 매칭] 링크와 텍스트 가져오기
     amazon_url, btn_text = get_smart_amazon_link(topic)
 
-    # 본문 조립 (랜덤 4개 블록)
+    # 본문 조립 (랜덤 4개)
     selected_blocks = random.sample(CONTENT_BLOCKS, 4)
     body_content = ""
     
@@ -257,12 +258,11 @@ def create_final_html(topic, img_url, body_html, sidebar_html, amazon_url, btn_t
 def main():
     topic = get_live_trends()[0] 
     
-    # [스마트 매칭] 여기서도 링크를 가져와서 사이드바에도 적용
+    # [스마트 매칭]
     amazon_url, btn_text = get_smart_amazon_link(topic)
 
     body_text = generate_deep_report(topic) 
     html_body = markdown.markdown(body_text)
-    
     img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote('financial data visualization dark blue corporate style 8k')}?width=1200&height=600"
     
     history = []
@@ -277,7 +277,7 @@ def main():
     with open(HISTORY_FILE, "w", encoding="utf-8") as f: json.dump(history, f, indent=4)
     generate_seo_files(history)
     
-    # 사이드바 버튼과 본문 박스 모두 동적으로 바뀐 링크 사용
+    # [파라미터 전달] 수정된 링크들을 HTML 생성 함수로 전달
     full_html = create_final_html(topic, img_url, html_body, sidebar_html, amazon_url, btn_text)
     with open("index.html", "w", encoding="utf-8") as f: f.write(full_html)
     with open(archive_name, "w", encoding="utf-8") as f: f.write(full_html)
