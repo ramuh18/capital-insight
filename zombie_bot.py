@@ -11,11 +11,10 @@ BLOG_TITLE = "Capital Insight"
 BLOG_BASE_URL = "https://ramuh18.github.io/capital-insight/" 
 EMPIRE_URL = "https://empire-analyst.digital/"
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
-# [수익화 핵심] 본문 중간에 삽입할 제휴 링크
 AFFILIATE_LINK = "https://www.bybit.com/invite?ref=DOVWK5A" 
 AMAZON_LINK = "https://www.amazon.com/s?k=ledger+nano+x&tag=empireanalyst-20"
 
-# [주제 리스트: 사람들의 '돈 걱정'을 자극하는 키워드 위주]
+# [주제 리스트: 50개]
 BACKUP_TOPICS = [
     "The Collapse of Fiat Currency", "Why Your Savings Are Dying", "The Next Great Depression",
     "Hyperinflation Warning Signs", "Bank Bail-ins Explained", "The End of the Dollar",
@@ -36,39 +35,112 @@ BACKUP_TOPICS = [
     "Capital Controls Coming", "Exit Strategies for 2026"
 ]
 
+# [핵심] 블록을 15개로 늘려서 조합의 수를 기하급수적으로 폭발시킴
+CONTENT_BLOCKS = [
+    """
+    ## The Silent Wealth Transfer
+    While the mainstream media distracts the public with trivial politics, a massive wealth transfer is occurring behind the scenes involving **{topic}**. Institutional whales are quietly accumulating assets while retail investors are being positioned to hold the bag. History shows that during every major cycle shift regarding {topic}, 90% of the population loses purchasing power, while the top 10% consolidate ownership. You must ask yourself: Which side of the trade are you on?
+    """,
+    """
+    ## Historical Precedents and {topic}
+    If we look back at the economic cycles of the 1970s and 2008, the patterns emerging with **{topic}** are terrifyingly similar. The debt-to-GDP ratios are unsustainable, and {topic} serves as the catalyst that could break the camel's back. The central banks have run out of ammunition. They cannot print their way out of the {topic} crisis without triggering hyperinflation. This is why smart money is exiting the fiat system rapidly.
+    """,
+    """
+    ## Why Banks Don't Want You to Know About {topic}
+    The legacy financial system relies on your ignorance about **{topic}**. As long as you keep your capital locked in depreciating savings accounts, they can leverage your money for their profit. However, {topic} represents a direct threat to their monopoly. By understanding the mechanics of {topic}, you can effectively 'opt-out' of their rigged game and reclaim your financial sovereignty.
+    """,
+    """
+    ## The Mathematics of Collapse
+    You don't need a PhD in economics to understand the math behind **{topic}**. It is a simple function of supply, demand, and liquidity. The current trajectory of {topic} suggests a mathematical inevitability of a system reset. When the derivatives market reacts to the volatility of {topic}, we could see a liquidity freeze that makes the 2008 crisis look like a minor correction.
+    """,
+    """
+    ## Actionable Strategy: Surviving {topic}
+    Hope is not a strategy. To survive the impact of **{topic}**, you need a concrete plan.
+    1. **Audit your exposure:** How much of your net worth is tied to the success of the legacy system?
+    2. **Hedge aggressively:** Use assets that inversely correlate with {topic}.
+    3. **Self-Custody:** If you don't hold the keys, you don't own the chips.
+    <div style="margin: 20px 0; padding: 15px; background: #ffebee; border-left: 5px solid #d90429;">
+        <strong>🚨 CRITICAL ALERT:</strong> The window to secure your assets is closing. 
+        <a href="{AMAZON_LINK}" style="color: #d90429; font-weight: bold;">[GET COLD STORAGE HARDWARE NOW]</a>
+    </div>
+    """,
+    """
+    ## The Institutional Trap
+    Do not follow the herd. When JP Morgan and BlackRock talk about **{topic}** on TV, they are usually misleading the public to create liquidity for their own exits. The real moves regarding {topic} happen in the dark pools, away from retail eyes. Our analysis suggests they are shorting the very assets they tell you to buy. This is classic manipulation using {topic} as the narrative hook.
+    """,
+    """
+    ## Technocratic Control and {topic}
+    The push for **{topic}** is not accidental. It aligns perfectly with the agenda for greater centralized control over human activity. By controlling the narrative around {topic}, the powers that be can implement stricter capital controls and surveillance measures. Your only defense against this encroachment is decentralized assets and privacy-preserving technologies.
+    """,
+    """
+    ## The 2026 Outlook for {topic}
+    Looking ahead, the fiscal landscape for 2026 will be defined by how the world handles **{topic}**. We predict a bifurcation of the economy: those who hold hard assets and those who rely on government handouts. {topic} will be the dividing line. If you are not prepared for the volatility {topic} will bring, your portfolio could face a drawdown of 50% or more in real purchasing power terms.
+    """,
+    """
+    ## The Currency Debasement Factor
+    At the core of the **{topic}** issue lies the fundamental weakness of fiat currency. Since the decoupling from gold in 1971, the dollar has lost over 98% of its purchasing power. {topic} is merely the latest symptom of this terminal disease. Investors ignoring this reality are essentially storing their wealth in a melting ice cube.
+    """,
+    """
+    ## Geopolitical Implications
+    **{topic}** is not just an economic metric; it is a weapon of geopolitical warfare. Nations are actively positioning themselves around {topic} to gain leverage in the new multipolar world order. The BRICS alliance, in particular, is moving away from western financial hegemony, using {topic} as a wedge. This shift will catch most western investors completely off guard.
+    """,
+    """
+    ## The Velocity of Money
+    A critical, often overlooked aspect of **{topic}** is the velocity of money. As confidence in the system erodes, we expect a rapid increase in velocity, turning {topic} into a hyper-inflationary event. This is the "Crack-Up Boom" phase described by Austrian economists, where asset prices soar not because of value, but because the currency is dying.
+    """,
+    """
+    ## Lessons from History
+    Rome didn't fall in a day, but its currency did. The parallels between the late Roman Empire and today's indicators regarding **{topic}** are stark. Currency clipping then is quantitative easing now. The outcome is always the same: a wealth transfer from the poor to the asset-holding class. {topic} is your warning bell.
+    """,
+    """
+    ## The Digital Panopticon
+    While **{topic}** disrupts the market, it also paves the way for Central Bank Digital Currencies (CBDCs). The chaos caused by {topic} will be used as the justification for "safer" government-controlled digital money. This is the ultimate trap. Financial privacy will be a relic of the past unless you take steps to secure sovereign assets now.
+    """,
+    """
+    ## Supply Chain Fragility
+    The impact of **{topic}** extends into the physical world. Global supply chains, optimized for efficiency over resilience, are breaking under the strain of {topic}. We foresee shortages in critical commodities. This is not just about portfolio numbers; it's about access to essential resources.
+    """,
+    """
+    ## The Final Exit Strategy
+    How do you win against **{topic}**? You don't play their game. You exit. By moving capital into asymmetric bets—assets that have limited supply and high demand—you insulate yourself from the destruction caused by {topic}. This is the essence of the Empire Analyst strategy: profit from the collapse, don't be a victim of it.
+    """
+]
+
 def get_live_trends():
     selected_topic = random.choice(BACKUP_TOPICS)
     return [selected_topic]
 
-# [핵심 수정: 교육이 아니라 '행동(클릭)'을 유도하는 선동형 카피라이팅]
 def generate_deep_report(topic):
-    return f"""
-# [URGENT_WARNING] Why {topic} Should Terrify You
+    # 1. 인트로
+    intro = f"""
+# [URGENT_WARNING] The Truth About {topic} That They Won't Tell You
 
-## 1. The Silent Robbery
-Most people are sleeping while **{topic}** is quietly eroding their financial future. The mainstream media tells you everything is fine, but the data on {topic} suggests a catastrophic shift is underway. If you are holding traditional assets or keeping cash in the bank, you are the primary victim of this systemic failure. **The system is not broken; it was built to take your wealth.**
+## Executive Summary
+The global financial system is flashing red warning signals regarding **{topic}**. While the masses are asleep, a systemic shift is underway that will redefine wealth distribution for the next decade. This report exposes the harsh reality of {topic} and provides a roadmap for survival.
+"""
+    
+    # 2. 본문 확장 (15개 블록 중 5개를 랜덤으로 뽑음 -> 조합 경우의 수 폭발)
+    # 글이 매번 순서와 내용이 다르게 조립됨
+    selected_blocks = random.sample(CONTENT_BLOCKS, 5)
+    body_content = ""
+    for block in selected_blocks:
+        body_content += block.format(topic=topic, AMAZON_LINK=AMAZON_LINK) + "\n"
 
-## 2. The Trap is Set
-Institutional whales have already positioned themselves to profit from **{topic}**. They are exiting the burning building while telling retail investors to "buy the dip." When the full impact of {topic} hits the markets, liquidity will dry up instantly. The doors will close, and your capital will be locked inside the legacy system. This is not a prediction; it is a mathematical certainty based on current leverage ratios.
-
-> **[CRITICAL ALERT]** Do not leave your assets vulnerable. The window to act is closing.  
-> <a href="{AFFILIATE_LINK}" style="color: red; font-weight: bold;">>> CLICK HERE TO HEDGE YOUR PORTFOLIO NOW</a>
-
-## 3. Your Only Escape Route
-There is only one way to survive the fallout of **{topic}**: Radical Sovereignty. You must decouple your wealth from the debt-based fiat system immediately. This means moving into hard assets and self-custody solutions that cannot be frozen, seized, or inflated away.
-
-* **Step 1:** Stop trusting banks with your life savings.
-* **Step 2:** Accumulate sovereign assets. <a href="{AMAZON_LINK}" style="text-decoration: underline;">[Get Hardware Security Here]</a>
-* **Step 3:** Bet against the collapsing system.
-
-## 4. Final Verdict
-The timeline for **{topic}** is accelerating. You have two choices: watch your purchasing power vanish, or take action today to secure your financial freedom. History favors the prepared. Do not be part of the herd that gets slaughtered.
-
-<div style="background: #eee; padding: 15px; border-left: 5px solid #d90429; margin-top: 20px;">
-    <strong>🚀 ACTION REQUIRED:</strong> The markets are moving fast. 
-    <a href="{EMPIRE_URL}"><strong>[ACCESS THE FULL STRATEGY GUIDE AT EMPIRE ANALYST]</strong></a>
+    # 3. 결론 및 CTA
+    conclusion = f"""
+## Final Verdict: The Time is Now
+The timeline for **{topic}** is accelerating faster than anticipated. You can choose to ignore the warning signs, or you can take action today.
+<br><br>
+**Don't let your wealth evaporate.**
+<div style="background: #f0f2f5; padding: 20px; text-align: center; border: 2px solid #001f3f; margin-top: 20px;">
+    <h3>🚀 EXECUTE YOUR EXIT PLAN</h3>
+    <p>The system is fragile. Secure your position before the liquidity dries up.</p>
+    <a href="{EMPIRE_URL}" style="background: #d90429; color: white; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; display: inline-block;">ACCESS FULL STRATEGY GUIDE</a>
+    <br><br>
+    <a href="{AFFILIATE_LINK}" style="color: #001f3f; font-weight: bold; text-decoration: underline;">>> Hedge with Derivatives on Bybit</a>
 </div>
 """
+    return intro + body_content + conclusion
 
 def generate_seo_files(history):
     sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -155,7 +227,6 @@ def main():
     topic = get_live_trends()[0] 
     body_text = generate_deep_report(topic) 
     html_body = markdown.markdown(body_text)
-    # 이미지도 자극적이고 어두운 톤으로 변경
     img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote('financial crisis panic wall street crash red charts dark cinematic 8k')}?width=1200&height=600"
     
     history = []
@@ -164,14 +235,4 @@ def main():
     
     sidebar_html = "".join([f"<li style='margin-bottom:10px;'>🚨 <a href='{BLOG_BASE_URL}{h.get('file','')}' style='color:#333; text-decoration:none;'>{h.get('title')[:25]}...</a></li>" for h in history[:10]])
     
-    archive_name = f"post_{datetime.now().strftime('%Y%m%d_%H%M')}.html"
-    history.insert(0, {"date": datetime.now().strftime("%Y-%m-%d"), "title": topic, "file": archive_name})
-    
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f: json.dump(history, f, indent=4)
-    generate_seo_files(history)
-    
-    full_html = create_final_html(topic, img_url, html_body, sidebar_html)
-    with open("index.html", "w", encoding="utf-8") as f: f.write(full_html)
-    with open(archive_name, "w", encoding="utf-8") as f: f.write(full_html)
-
-if __name__ == "__main__": main()
+    archive_name = f"post_{datetime.now().strftime('%Y%
