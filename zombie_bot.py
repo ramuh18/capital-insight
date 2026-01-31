@@ -12,7 +12,7 @@ BLOG_BASE_URL = "https://ramuh18.github.io/capital-insight/"
 EMPIRE_URL = "https://empire-analyst.digital/"
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 AFFILIATE_LINK = "https://www.bybit.com/invite?ref=DOVWK5A" 
-AMAZON_LINK = "https://www.amazon.com/s?k=ledger+nano+x&tag=empireanalyst-20"
+# [수정] 고정된 아마존 링크 삭제 -> 함수에서 동적으로 생성
 
 # [주제 리스트 50개]
 BACKUP_TOPICS = [
@@ -35,7 +35,7 @@ BACKUP_TOPICS = [
     "Capital Controls Coming", "Exit Strategies for 2026"
 ]
 
-# [문단 블록 15개 - 여기선 링크 박스를 뺐음 (중복 방지)]
+# [문단 블록 15개]
 CONTENT_BLOCKS = [
     """
     ## The Silent Wealth Transfer
@@ -99,6 +99,27 @@ CONTENT_BLOCKS = [
     """
 ]
 
+# [스마트 매칭] 주제에 따라 아마존 검색어를 자동으로 바꿔주는 함수
+def get_smart_amazon_link(topic):
+    topic_lower = topic.lower()
+    search_keyword = "wealth+preservation" # 기본값
+    button_text = "🛡️ SECURE ASSETS"
+
+    if any(x in topic_lower for in ["gold", "silver", "metal", "commodity"]):
+        search_keyword = "gold+bars+and+coins"
+        button_text = "💰 BUY REAL GOLD"
+    elif any(x in topic_lower for in ["food", "energy", "survival", "crisis", "collapse"]):
+        search_keyword = "emergency+food+supply+25+year"
+        button_text = "🥫 SURVIVAL GEAR"
+    elif any(x in topic_lower for in ["crypto", "bitcoin", "digital", "cbdc", "wallet", "ledger"]):
+        search_keyword = "ledger+nano+x"
+        button_text = "🔐 HARDWARE WALLET"
+    elif any(x in topic_lower for in ["book", "reading", "inflation", "debt", "money"]):
+        search_keyword = "investing+books+best+sellers"
+        button_text = "📚 BEST BOOKS"
+    
+    return f"https://www.amazon.com/s?k={search_keyword}&tag=empireanalyst-20", button_text
+
 def get_live_trends():
     selected_topic = random.choice(BACKUP_TOPICS)
     return [selected_topic]
@@ -112,28 +133,31 @@ def generate_deep_report(topic):
 The global financial system is flashing warning signals regarding **{topic}**. While the masses are unaware, a systemic shift is underway that will redefine wealth distribution for the next decade. This report exposes the reality of {topic} and provides a roadmap for preservation.
 """
     
-    # [수정된 로직] 랜덤으로 4개를 뽑는데, 2개 쓰고 -> 중간광고 -> 나머지 2개 쓰기
+    # [스마트 매칭] 주제에 맞는 아마존 링크와 버튼 텍스트 가져오기
+    amazon_url, btn_text = get_smart_amazon_link(topic)
+
+    # 본문 조립 (랜덤 4개 블록)
     selected_blocks = random.sample(CONTENT_BLOCKS, 4)
     body_content = ""
     
-    # 앞부분 2개 블록
+    # 앞부분 2개
     for block in selected_blocks[:2]:
-        body_content += textwrap.dedent(block).format(topic=topic, AMAZON_LINK=AMAZON_LINK) + "\n"
+        body_content += textwrap.dedent(block).format(topic=topic) + "\n"
 
-    # ▼▼▼▼ [강제 삽입] 중간 링크 박스 (무조건 나옴) ▼▼▼▼
+    # ▼▼▼▼ [중간 광고 박스] 주제에 맞춰서 내용이 바뀜 ▼▼▼▼
     body_content += f"""
 <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-left: 5px solid #001f3f; border-radius: 4px;">
-    <h3 style="margin-top:0; color:#001f3f;">⚠️ Critical Alert: Asset Protection</h3>
-    <p>Market volatility regarding <strong>{topic}</strong> is increasing. Don't leave your funds on exchanges.</p>
-    <a href="{AMAZON_LINK}" style="display:inline-block; background:#001f3f; color:#fff; padding:10px 20px; text-decoration:none; font-weight:bold; border-radius:4px;">🛡️ GET HARDWARE WALLET</a>
-    <a href="{AFFILIATE_LINK}" style="display:inline-block; background:#c5a059; color:#fff; padding:10px 20px; text-decoration:none; font-weight:bold; border-radius:4px; margin-left:10px;">📉 TRADE VOLATILITY</a>
+    <h3 style="margin-top:0; color:#001f3f;">⚠️ Essential Preparation</h3>
+    <p>Given the risks associated with <strong>{topic}</strong>, we strongly recommend securing physical backups.</p>
+    <a href="{amazon_url}" style="display:inline-block; background:#001f3f; color:#fff; padding:10px 20px; text-decoration:none; font-weight:bold; border-radius:4px;">{btn_text}</a>
+    <a href="{AFFILIATE_LINK}" style="display:inline-block; background:#c5a059; color:#fff; padding:10px 20px; text-decoration:none; font-weight:bold; border-radius:4px; margin-left:10px;">📉 HEDGE NOW</a>
 </div>
 """
     # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-    # 뒷부분 2개 블록
+    # 뒷부분 2개
     for block in selected_blocks[2:]:
-        body_content += textwrap.dedent(block).format(topic=topic, AMAZON_LINK=AMAZON_LINK) + "\n"
+        body_content += textwrap.dedent(block).format(topic=topic) + "\n"
 
     # 결론
     conclusion = f"""
@@ -162,7 +186,7 @@ def generate_seo_files(history):
     robots = f"User-agent: *\nAllow: /\nSitemap: {BLOG_BASE_URL}sitemap.xml"
     with open("robots.txt", "w", encoding="utf-8") as f: f.write(robots)
 
-def create_final_html(topic, img_url, body_html, sidebar_html):
+def create_final_html(topic, img_url, body_html, sidebar_html, amazon_url, btn_text):
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="여기에_인증태그_입력" />
@@ -201,7 +225,7 @@ def create_final_html(topic, img_url, body_html, sidebar_html):
                 <h3 style="margin-top:0; color:var(--main-blue);">Strategic Access</h3>
                 <a href="{EMPIRE_URL}" class="btn">🚀 EXIT PLAN STRATEGY</a>
                 <a href="{AFFILIATE_LINK}" class="btn" style="background:#444;">📉 SHORT MARKET</a>
-                <a href="{AMAZON_LINK}" class="btn" style="background:#c5a059;">🛡️ SECURE ASSETS</a>
+                <a href="{amazon_url}" class="btn" style="background:#c5a059;">{btn_text}</a>
             </div>
             <div class="side-card">
                 <h3>Latest Analysis</h3>
@@ -232,9 +256,13 @@ def create_final_html(topic, img_url, body_html, sidebar_html):
 
 def main():
     topic = get_live_trends()[0] 
+    
+    # [스마트 매칭] 여기서도 링크를 가져와서 사이드바에도 적용
+    amazon_url, btn_text = get_smart_amazon_link(topic)
+
     body_text = generate_deep_report(topic) 
     html_body = markdown.markdown(body_text)
-    # 이미지: 1호기 전용 (금융/데이터/차분함)
+    
     img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote('financial data visualization dark blue corporate style 8k')}?width=1200&height=600"
     
     history = []
@@ -249,7 +277,8 @@ def main():
     with open(HISTORY_FILE, "w", encoding="utf-8") as f: json.dump(history, f, indent=4)
     generate_seo_files(history)
     
-    full_html = create_final_html(topic, img_url, html_body, sidebar_html)
+    # 사이드바 버튼과 본문 박스 모두 동적으로 바뀐 링크 사용
+    full_html = create_final_html(topic, img_url, html_body, sidebar_html, amazon_url, btn_text)
     with open("index.html", "w", encoding="utf-8") as f: f.write(full_html)
     with open(archive_name, "w", encoding="utf-8") as f: f.write(full_html)
 
