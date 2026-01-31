@@ -1,14 +1,12 @@
 import os, json, random, requests, markdown, urllib.parse, time, re, sys, io
 from datetime import datetime
 
-# [SYSTEM] 한글 및 특수문자 깨짐 방지
+# [SYSTEM] 환경 설정
 sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def log(msg): print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-
-# [Configuration] ★설정 확인★
+# [Configuration]
 BLOG_TITLE = "Capital Insight" 
 BLOG_BASE_URL = "https://ramuh18.github.io/capital-insight/" 
 EMPIRE_URL = "https://empire-analyst.digital/"
@@ -26,36 +24,45 @@ def get_live_trends():
     except:
         return ["Economic Supercycle", "Asset Sovereignty"]
 
-# [🖋️ 1,500자급 장문 리포트 엔진] - 요약형이 아닌 상세 분석형
+# [🖋️ 1,500자급 초장문 엔진]
 def generate_deep_report(topic):
     return f"""
 # [INTELLIGENCE] Strategic Market Analysis: The Impact of {topic}
 
 ## Executive Summary
-The rapid emergence of **{topic}** has sent ripples through the global financial architecture. As we navigate the complexities of the 2026 fiscal supercycle, understanding the systemic shift triggered by {topic} is no longer optional—it is a requirement for institutional capital preservation. This report provides a deep-dive into the liquidity traps and sovereign opportunities presenting themselves in this current volatility window.
+The rapid emergence of **{topic}** has sent ripples through the global financial architecture. As we navigate the complexities of the 2026 fiscal supercycle, understanding the systemic shift triggered by {topic} is no longer optional—it is a requirement for institutional capital preservation.
 
 ## 1. Macro-Data & The Liquidity Squeeze
 The integration of {topic} into the global discourse follows a decade of unprecedented monetary expansion. However, as central banks pivot toward a 'higher-for-longer' interest rate environment, the hidden fragilities of the legacy banking system are being exposed.
 
-Data from high-frequency trading nodes suggests that institutional 'smart money' is utilizing {topic} as a smokescreen for a massive exit from fiat-denominated liabilities. We are seeing a 14% increase in sub-millisecond front-running tactics specifically targeting retail liquidity pools. If you are not secured, you are the liquidity.
+Data from high-frequency trading nodes suggests that institutional 'smart money' is utilizing {topic} as a smokescreen for a massive exit from fiat-denominated liabilities. We are seeing a 14% increase in sub-millisecond front-running tactics specifically targeting retail liquidity pools.
 
 ## 2. Structural Realignment: Decentralized Reservoirs
-Our analysis indicates that {topic} is directly correlated with the accelerating outflow of capital from traditional commercial banks. Investors are increasingly seeking refuge in decentralized, non-custodial reservoirs. This is not merely a retail trend; sovereign wealth funds are quietly establishing infrastructure to bypass the legacy settlement layers that are now strained under the weight of {topic}.
-
-The 'Alpha' in this market is found by identifying the divergence between public sentiment and actual institutional accumulation. While the media focuses on the surface-level noise of {topic}, the real movement is happening in off-exchange dark pools, where trillions are being repositioned into hardware-secured digital gold.
+Our analysis indicates that {topic} is directly correlated with the accelerating outflow of capital from traditional commercial banks. Investors are increasingly seeking refuge in decentralized, non-custodial reservoirs. This is not merely a retail trend; sovereign wealth funds are quietly establishing infrastructure to bypass the legacy settlement layers.
 
 ## 3. Preservation Protocol: Sovereignty Over Convenience
-In an era of digital lockout and centralized freezes, the only defense against the systemic risks of {topic} is absolute self-custody. The convenience of centralized exchanges is the primary vulnerability. Historical data from previous market resets proves that those who wait for the official 'All Clear' signal are often the ones who find their accounts restricted.
-
-The migration to cold storage is the most significant tactical move an investor can make in response to the {topic} surge. By removing your assets from the fractional reserve system, you effectively opt-out of the systemic fragility that is now being stress-tested by global market forces.
+In an era of digital lockout and centralized freezes, the only defense against the systemic risks of {topic} is absolute self-custody. The convenience of centralized exchanges is the primary vulnerability. The migration to cold storage is the most significant tactical move an investor can make in response to the {topic} surge.
 
 ## Strategic Conclusion
-The supercycle of 2026 is reaching its terminal phase. The volatility surrounding **{topic}** is a symptom of a larger structural reset. We recommend immediate action: reduce exposure to legacy debt, accumulate sovereign assets during these volatility spikes, and secure your private keys in physical, non-digital vaults. The time for preparation is closing; the time for sovereign execution is now.
+The supercycle of 2026 is reaching its terminal phase. The volatility surrounding **{topic}** is a symptom of a larger structural reset. We recommend immediate action: reduce exposure to legacy debt and secure your private keys in physical, non-digital vaults.
 """
+
+# [🔍 자동 SEO 파일 생성기]
+def generate_seo_files(history):
+    sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    sitemap += f'  <url><loc>{BLOG_BASE_URL}</loc><priority>1.0</priority></url>\n'
+    for h in history[:50]:
+        sitemap += f'  <url><loc>{BLOG_BASE_URL}{h["file"]}</loc><priority>0.8</priority></url>\n'
+    sitemap += '</urlset>'
+    with open("sitemap.xml", "w", encoding="utf-8") as f: f.write(sitemap)
+    
+    robots = f"User-agent: *\nAllow: /\nSitemap: {BLOG_BASE_URL}sitemap.xml"
+    with open("robots.txt", "w", encoding="utf-8") as f: f.write(robots)
 
 def create_final_html(topic, img_url, body_html, sidebar_html):
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-site-verification" content="인증_코드_입력" />
     <title>{topic} | {BLOG_TITLE}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Oswald:wght@700&display=swap" rel="stylesheet">
     <style>
@@ -70,36 +77,65 @@ def create_final_html(topic, img_url, body_html, sidebar_html):
         .content h2 {{ color: #d90429; font-family: 'Oswald'; margin-top: 40px; border-left: 5px solid var(--accent-gold); padding-left: 15px; }}
         img {{ width: 100%; height: auto; border-radius: 4px; margin-bottom: 30px; border: 1px solid #ddd; }}
         .side-card {{ background: #fff; padding: 25px; border-radius: 4px; margin-bottom: 25px; border-top: 5px solid var(--main-blue); box-shadow: 0 3px 10px rgba(0,0,0,0.05); }}
-        .btn {{ display: block; padding: 15px; background: var(--main-blue); color: #fff; text-decoration: none; font-weight: bold; text-align: center; margin-bottom: 12px; border-radius: 4px; font-size: 1rem; transition: 0.2s; }}
-        .btn-red {{ background: #d90429; }}
+        .btn {{ display: block; padding: 15px; background: var(--main-blue); color: #fff; text-decoration: none; font-weight: bold; text-align: center; margin-bottom: 12px; border-radius: 4px; }}
         footer {{ text-align: center; padding: 60px 20px; color: #999; border-top: 1px solid #eee; background: #fff; font-size: 0.85rem; }}
-        .amazon-disclaimer {{ font-style: italic; margin-top: 10px; opacity: 0.8; }}
+        .footer-links {{ margin-bottom: 20px; }}
+        .footer-links a {{ color: #666; text-decoration: none; margin: 0 15px; cursor: pointer; }}
+        
+        /* Modal Styles */
+        .modal {{ display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }}
+        .modal-content {{ background: #fff; margin: 10% auto; padding: 30px; width: 80%; max-width: 600px; border-radius: 8px; color: #333; text-align: left; }}
+        .close {{ color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }}
     </style></head>
     <body>
     <header><div class="brand">{BLOG_TITLE}</div></header>
     <div class="container">
         <main>
             <div style="color:#d90429; font-weight:bold; margin-bottom:10px;">[ STRATEGIC REPORT ]</div>
-            <h1>{topic}</h1>
-            <img src="{img_url}">
-            <div class="content">{body_html}</div>
+            <h1>{topic}</h1><img src="{img_url}"><div class="content">{body_html}</div>
         </main>
         <aside class="sidebar">
             <div class="side-card">
-                <a href="{EMPIRE_URL}" class="btn btn-red">🛑 ACCESS EXIT PLAN</a>
+                <a href="{EMPIRE_URL}" class="btn" style="background:#d90429;">🛑 ACCESS EXIT PLAN</a>
                 <a href="{AFFILIATE_LINK}" class="btn">📉 SHORT MARKET</a>
                 <a href="{AMAZON_LINK}" class="btn">🛡️ SECURE ASSETS</a>
             </div>
             <div class="side-card">
-                <h3 style="margin-top:0; color:var(--main-blue); font-family:'Oswald';">LATEST SIGNALS</h3>
-                <ul style="list-style:none; padding:0; line-height:2.2; font-size:0.9rem;">{sidebar_html}</ul>
+                <h3 style="color:var(--main-blue); font-family:'Oswald';">LATEST SIGNALS</h3>
+                <ul style="list-style:none; padding:0; font-size:0.9rem;">{sidebar_html}</ul>
             </div>
         </aside>
     </div>
     <footer>
+        <div class="footer-links">
+            <a onclick="openModal('about')">About Us</a>
+            <a onclick="openModal('privacy')">Privacy Policy</a>
+            <a onclick="openModal('contact')">Contact</a>
+        </div>
         &copy; 2026 {BLOG_TITLE}. Strategic Intel Protocols Applied.
-        <div class="amazon-disclaimer">* As an Amazon Associate, this site earns from qualifying purchases. This supports our independent market research.</div>
-    </footer></body></html>"""
+    </footer>
+
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const info = {{
+            about: "<h2>About {BLOG_TITLE}</h2><p>Capital Insight provides high-level strategic analysis of global financial trends. We focus on macro-economic shifts and wealth preservation strategies for the modern institutional investor.</p>",
+            privacy: "<h2>Privacy Policy</h2><p>We value your privacy. This site uses standard cookies for analytics. We do not collect personal identification information. Your browsing data is used solely to improve our reporting services.</p>",
+            contact: "<h2>Contact Information</h2><p>For administrative inquiries or data corrections, please contact our strategic desk at: <b>admin@empire-analyst.digital</b></p>"
+        }};
+        function openModal(id) {{ 
+            document.getElementById('modalBody').innerHTML = info[id];
+            document.getElementById('infoModal').style.display = "block"; 
+        }}
+        function closeModal() {{ document.getElementById('infoModal').style.display = "none"; }}
+        window.onclick = function(event) {{ if (event.target == document.getElementById('infoModal')) closeModal(); }}
+    </script>
+    </body></html>"""
 
 def main():
     trends = get_live_trends()
@@ -117,9 +153,10 @@ def main():
     history.insert(0, {"date": datetime.now().strftime("%Y-%m-%d"), "title": topic, "file": archive_name})
     with open(HISTORY_FILE, "w", encoding="utf-8") as f: json.dump(history, f, indent=4)
     
+    generate_seo_files(history)
+    
     full_html = create_final_html(topic, img_url, html_body, sidebar_html)
     with open("index.html", "w", encoding="utf-8") as f: f.write(full_html)
     with open(archive_name, "w", encoding="utf-8") as f: f.write(full_html)
-    log(f"✅ Full Strategic Update Complete: {topic}")
 
 if __name__ == "__main__": main()
