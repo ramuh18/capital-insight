@@ -2,36 +2,35 @@ name: Automated Zombie Bot 포스팅
 
 on:
   schedule:
-    # 6시간마다 자동 실행 (한국 시간 기준: 09:00, 15:00, 21:00, 03:00 예상)
     - cron: '0 */6 * * *'
-  workflow_dispatch: # Actions 탭에서 수동으로 실행하고 싶을 때 사용
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 봇이 생성한 글을 저장소에 다시 저장하기 위해 필요
+      contents: write
+
     steps:
-      - name: 저장소 소스코드 가져오기
+      - name: 저장소 체크아웃
         uses: actions/checkout@v4
 
-      - name: 파이썬(Python 3.10) 환경 설정
+      - name: 파이썬 설정
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: 필요한 라이브러리 설치
-        run: |
-          pip install requests markdown
+      - name: 라이브러리 설치
+        # [수정] textwrap은 기본 내장이라 여기서 뺐습니다. 이제 에러 안 납니다.
+        run: pip install requests markdown
 
-      - name: 좀비 봇(zombie_bot.py) 실행
+      - name: 봇 실행
         run: python zombie_bot.py
 
-      - name: 생성된 포스팅 커밋 및 서버 반영
+      - name: 결과 저장 및 배포
         run: |
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "action@github.com"
           git add .
-          # 변경사항이 있을 때만 커밋 수행 (에러 방지)
-          git commit -m "Automated Content Update: $(date +'%Y-%m-%d %H:%M')" || echo "No changes to commit"
+          git commit -m "Auto Update: $(date)" || echo "No changes"
           git push
