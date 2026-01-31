@@ -6,7 +6,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# [Configuration] 1호기 전용 설정
+# [Configuration] 1호기 설정
 BLOG_TITLE = "Capital Insight" 
 BLOG_BASE_URL = "https://ramuh18.github.io/capital-insight/" 
 EMPIRE_URL = "https://empire-analyst.digital/"
@@ -14,7 +14,7 @@ HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 AFFILIATE_LINK = "https://www.bybit.com/invite?ref=DOVWK5A" 
 AMAZON_LINK = "https://www.amazon.com/s?k=ledger+nano+x&tag=empireanalyst-20"
 
-# [주제 리스트 50개: 1호기 테마(거시경제/위기)]
+# [주제 리스트 50개]
 BACKUP_TOPICS = [
     "The Collapse of Fiat Currency", "Why Your Savings Are Dying", "The Next Great Depression",
     "Hyperinflation Warning Signs", "Bank Bail-ins Explained", "The End of the Dollar",
@@ -35,7 +35,7 @@ BACKUP_TOPICS = [
     "Capital Controls Coming", "Exit Strategies for 2026"
 ]
 
-# [문단 블록 15개: 금융/경제 테마]
+# [문단 블록 15개 - 여기선 링크 박스를 뺐음 (중복 방지)]
 CONTENT_BLOCKS = [
     """
     ## The Silent Wealth Transfer
@@ -55,14 +55,7 @@ CONTENT_BLOCKS = [
     """,
     """
     ## Actionable Strategy: Surviving {topic}
-    Hope is not a strategy. To survive the impact of **{topic}**, you need a concrete plan.
-    1. **Audit your exposure:** How much of your net worth is tied to the success of the legacy system?
-    2. **Hedge aggressively:** Use assets that inversely correlate with {topic}.
-    3. **Self-Custody:** If you don't hold the keys, you don't own the chips.
-    <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 5px solid #001f3f;">
-        <strong>💡 Strategic Move:</strong> Secure your assets offline. 
-        <a href="{AMAZON_LINK}" style="color: #001f3f; font-weight: bold;">[View Hardware Wallet Options]</a>
-    </div>
+    Hope is not a strategy. To survive the impact of **{topic}**, you need a concrete plan. Audit your exposure: How much of your net worth is tied to the success of the legacy system? Hedge aggressively using assets that inversely correlate with {topic}. If you don't hold the keys, you don't own the chips.
     """,
     """
     ## The Institutional Trap
@@ -119,14 +112,30 @@ def generate_deep_report(topic):
 The global financial system is flashing warning signals regarding **{topic}**. While the masses are unaware, a systemic shift is underway that will redefine wealth distribution for the next decade. This report exposes the reality of {topic} and provides a roadmap for preservation.
 """
     
-    # [핵심 수정] 1300자 내외 유지를 위해 블록 4개만 선택 + 공백 제거
+    # [수정된 로직] 랜덤으로 4개를 뽑는데, 2개 쓰고 -> 중간광고 -> 나머지 2개 쓰기
     selected_blocks = random.sample(CONTENT_BLOCKS, 4)
     body_content = ""
-    for block in selected_blocks:
-        clean_block = textwrap.dedent(block)
-        body_content += clean_block.format(topic=topic, AMAZON_LINK=AMAZON_LINK) + "\n"
+    
+    # 앞부분 2개 블록
+    for block in selected_blocks[:2]:
+        body_content += textwrap.dedent(block).format(topic=topic, AMAZON_LINK=AMAZON_LINK) + "\n"
 
-    # 결론 (깔끔한 디자인)
+    # ▼▼▼▼ [강제 삽입] 중간 링크 박스 (무조건 나옴) ▼▼▼▼
+    body_content += f"""
+<div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-left: 5px solid #001f3f; border-radius: 4px;">
+    <h3 style="margin-top:0; color:#001f3f;">⚠️ Critical Alert: Asset Protection</h3>
+    <p>Market volatility regarding <strong>{topic}</strong> is increasing. Don't leave your funds on exchanges.</p>
+    <a href="{AMAZON_LINK}" style="display:inline-block; background:#001f3f; color:#fff; padding:10px 20px; text-decoration:none; font-weight:bold; border-radius:4px;">🛡️ GET HARDWARE WALLET</a>
+    <a href="{AFFILIATE_LINK}" style="display:inline-block; background:#c5a059; color:#fff; padding:10px 20px; text-decoration:none; font-weight:bold; border-radius:4px; margin-left:10px;">📉 TRADE VOLATILITY</a>
+</div>
+"""
+    # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+    # 뒷부분 2개 블록
+    for block in selected_blocks[2:]:
+        body_content += textwrap.dedent(block).format(topic=topic, AMAZON_LINK=AMAZON_LINK) + "\n"
+
+    # 결론
     conclusion = f"""
 ## Final Verdict
 The timeline for **{topic}** is accelerating. You can choose to ignore the indicators, or you can take action today.
@@ -160,12 +169,10 @@ def create_final_html(topic, img_url, body_html, sidebar_html):
     <title>{topic} | {BLOG_TITLE}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
     <style>
-        /* 1호기 테마: 네이비 & 골드 */
         :root {{ --main-blue: #001f3f; --accent-gold: #c5a059; }}
         body {{ font-family: 'Inter', sans-serif; background: #f8f9fa; color: #333; line-height: 1.8; margin: 0; }}
         header {{ background: var(--main-blue); color: #fff; padding: 25px; text-align: center; border-bottom: 5px solid var(--accent-gold); }}
         .brand {{ font-family: 'Merriweather', serif; font-size: 2rem; letter-spacing: 1px; }}
-        /* 표준 너비 1100px로 고정 */
         .container {{ max-width: 1100px; margin: 40px auto; display: grid; grid-template-columns: 1fr 320px; gap: 40px; padding: 0 20px; }}
         @media(max-width: 900px) {{ .container {{ grid-template-columns: 1fr; }} }}
         main {{ background: #fff; padding: 50px; border: 1px solid #ddd; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-radius: 4px; }}
